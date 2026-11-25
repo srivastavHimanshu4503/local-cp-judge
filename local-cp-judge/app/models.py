@@ -151,6 +151,27 @@ class CustomTestCaseItem(BaseModel):
     expected_text: str = Field(default="", description="Expected content preview")
 
 
+class SampleTestCaseItem(BaseModel):
+    """Metadata and editable content for a canonical sample testcase (with optional session override)."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(description="Sample testcase stem, e.g. '1' or '01-sample'")
+    test_name: str = Field(description="Full test identifier, e.g. 'sample/1'")
+    input_text: str = Field(default="", description="Standard input text")
+    expected_text: str = Field(default="", description="Expected output text")
+    description: str = Field(default="", description="Optional sample description from .desc")
+    is_edited: bool = Field(default=False, description="True if overridden in the user's current session")
+    is_truncated: bool = Field(default=False, description="True if file exceeds editable size limit")
+
+
+class SampleTestCaseUpdate(BaseModel):
+    """Payload to update an existing sample testcase override for the active session."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    input_text: str = Field(default="", description="Updated standard input content")
+    expected_text: str = Field(default="", description="Updated expected output content")
+
+
 class StressTestRequest(BaseModel):
     """Request to run randomized differential testing against a reference brute-force solution."""
     model_config = ConfigDict(populate_by_name=True)

@@ -34,6 +34,8 @@ from app.models import (
     JudgeSummary,
     OpenExternalRequest,
     ProblemMeta,
+    SampleTestCaseItem,
+    SampleTestCaseUpdate,
     StressTestRequest,
     StressTestResult,
     SystemStatus,
@@ -42,8 +44,10 @@ from app.models import (
 from app.parser import (
     extract_and_parse_contest,
     get_problem_test_cases,
+    is_ignored_path,
     list_contests,
     load_contest,
+    natural_sort_key,
     resolve_problem_template,
 )
 from app.runner import (
@@ -173,6 +177,25 @@ def get_problem_dirs(
     build_dir.mkdir(parents=True, exist_ok=True)
     custom_dir.mkdir(parents=True, exist_ok=True)
     return shared_dir, workspace_dir, build_dir, custom_dir
+
+
+def _get_sample_overrides_dir(
+    contest_id: str,
+    problem_id: str,
+    session_id: Optional[str] = None,
+) -> Path:
+    """
+    Returns per-session directory for edited sample testcases without ever touching
+    canonical problem data/sample or data/secret files.
+    """
+    shared_dir = WORKSPACES_ROOT / contest_id / problem_id
+    sid = _sanitize_session_id(session_id)
+    if sid:
+        sample_dir = USER_WORKSPACES_ROOT / sid / contest_id / problem_id / "sample_overrides"
+    else:
+        sample_dir = shared_dir / "workspace" / "sample_overrides"
+    sample_dir.mkdir(parents=True, exist_ok=True)
+    return sample_dir
 
 
 @app.middleware("http")
@@ -852,8 +875,18 @@ async def stream_judge_execution(
         yield f"event: compile_error\ndata: {json.dumps(error_payload)}\n\n"
         return
 
-    # 3. Discover test cases
-    test_cases = get_problem_test_cases(problem_dir, suite=suite, custom_tests_dir=custom_dir)
+    # 3. Discover test cases (apply session sample overrides only when running sample suite)
+    sample_overrides_dir = (
+        _get_sample_overrides_dir(contest_id, prob.problem_id, session_id)
+        if suite == "sample"
+        else None
+    )
+    test_cases = get_problem_test_cases(
+        problem_dir,
+        suite=suite,
+        custom_tests_dir=custom_dir,
+        sample_overrides_dir=sample_overrides_dir,
+    )
     yield f"event: compile_success\ndata: {json.dumps({'total_tests': len(test_cases), 'compile_time_ms': compile_res.compile_time_ms})}\n\n"
 
     passed_count = 0
@@ -1164,6 +1197,224 @@ def delete_custom_test(
             detail=f"Custom testcase '{name}' not found"
         )
     return {"status": "deleted", "name": safe_name}
+
+
+# =====================================================================
+# Editable Sample Test Cases Endpoints (Sample Suite Only; Secret Locked)
+# =====================================================================
+
+MAX_EDITABLE_SAMPLE_BYTES = 65536
+
+
+def _find_canonical_sample_dir(problem_dir: Path) -> Optional[Path]:
+    for sub in (problem_dir / "data" / "sample", problem_dir / "tests" / "sample"):
+        if sub.exists() and sub.is_dir():
+            return sub
+    return None
+
+
+def _safe_read_sample_file(path: Optional[Path]) -> tuple[str, bool]:
+    if not path or not path.exists() or not path.is_file():
+        return "", False
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return "", False
+    if size > MAX_EDITABLE_SAMPLE_BYTES:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return f.read(MAX_EDITABLE_SAMPLE_BYTES), True
+    return path.read_text(encoding="utf-8", errors="replace"), False
+
+
+def _iter_canonical_samples(problem_dir: Path) -> list[tuple[str, Path, Optional[Path], Optional[Path]]]:
+    sample_dir = _find_canonical_sample_dir(problem_dir)
+    if not sample_dir:
+        return []
+
+    in_files = [
+        f for f in sample_dir.glob("*.in")
+        if f.is_file() and not is_ignored_path(f)
+    ]
+    in_files.sort(key=lambda f: natural_sort_key(f.stem))
+
+    entries: list[tuple[str, Path, Optional[Path], Optional[Path]]] = []
+    for in_file in in_files:
+        stem = in_file.stem
+        ans_file: Optional[Path] = sample_dir / f"{stem}.ans"
+        if not ans_file.exists():
+            alt_out = sample_dir / f"{stem}.out"
+            ans_file = alt_out if alt_out.exists() else None
+        desc_file = sample_dir / f"{stem}.desc"
+        entries.append((
+            stem,
+            in_file,
+            ans_file,
+            desc_file if desc_file.exists() and not is_ignored_path(desc_file) else None,
+        ))
+    return entries
+
+
+def _resolve_canonical_sample_entry(
+    problem_dir: Path,
+    sample_name: str,
+) -> tuple[str, Path, Optional[Path], Optional[Path]]:
+    raw = (sample_name or "").strip()
+    if (
+        not raw
+        or ".." in raw
+        or "/" in raw
+        or "\\" in raw
+        or raw.lower().startswith("secret")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only sample test cases can be edited; secret or path-qualified test names are not allowed.",
+        )
+
+    for stem, in_file, ans_file, desc_file in _iter_canonical_samples(problem_dir):
+        if stem == raw:
+            return stem, in_file, ans_file, desc_file
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Sample test case '{raw}' not found. Only existing sample test cases can be edited.",
+    )
+
+
+def _build_sample_item(
+    stem: str,
+    canon_in: Path,
+    canon_ans: Optional[Path],
+    desc_file: Optional[Path],
+    overrides_dir: Path,
+) -> SampleTestCaseItem:
+    ov_in = overrides_dir / f"{stem}.in"
+    ov_ans = overrides_dir / f"{stem}.ans"
+    has_ov_in = ov_in.exists() and ov_in.is_file()
+    has_ov_ans = ov_ans.exists() and ov_ans.is_file()
+
+    in_text, in_trunc = _safe_read_sample_file(ov_in if has_ov_in else canon_in)
+    ans_text, ans_trunc = _safe_read_sample_file(ov_ans if has_ov_ans else canon_ans)
+
+    desc_text = ""
+    if desc_file:
+        try:
+            desc_text = desc_file.read_text(encoding="utf-8", errors="replace").strip()
+        except Exception:
+            desc_text = ""
+
+    return SampleTestCaseItem(
+        name=stem,
+        test_name=f"sample/{stem}",
+        input_text=in_text,
+        expected_text=ans_text,
+        description=desc_text,
+        is_edited=(has_ov_in or has_ov_ans),
+        is_truncated=(in_trunc or ans_trunc),
+    )
+
+
+@app.get("/api/problems/{contest_id}/{problem_id}/sample-tests", response_model=list[SampleTestCaseItem])
+def list_sample_tests(
+    contest_id: str,
+    problem_id: str,
+    session_id: Optional[str] = Depends(get_session_id),
+):
+    """Lists canonical sample test cases merged with any active session edits (never secret tests)."""
+    _, prob = get_contest_and_problem(contest_id, problem_id)
+    problem_dir = WORKSPACES_ROOT / contest_id / prob.problem_id
+    overrides_dir = _get_sample_overrides_dir(contest_id, prob.problem_id, session_id)
+
+    return [
+        _build_sample_item(stem, in_file, ans_file, desc_file, overrides_dir)
+        for stem, in_file, ans_file, desc_file in _iter_canonical_samples(problem_dir)
+    ]
+
+
+@app.put("/api/problems/{contest_id}/{problem_id}/sample-tests/{sample_name}", response_model=SampleTestCaseItem)
+def update_sample_test(
+    contest_id: str,
+    problem_id: str,
+    sample_name: str,
+    payload: SampleTestCaseUpdate,
+    session_id: Optional[str] = Depends(get_session_id),
+):
+    """Saves session-isolated edits for an existing sample test case only."""
+    _, prob = get_contest_and_problem(contest_id, problem_id)
+    problem_dir = WORKSPACES_ROOT / contest_id / prob.problem_id
+    stem, canon_in, canon_ans, desc_file = _resolve_canonical_sample_entry(problem_dir, sample_name)
+
+    _, in_trunc = _safe_read_sample_file(canon_in)
+    _, ans_trunc = _safe_read_sample_file(canon_ans)
+    if in_trunc or ans_trunc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sample test case '{stem}' exceeds {MAX_EDITABLE_SAMPLE_BYTES} bytes and cannot be edited in the UI.",
+        )
+
+    in_text = payload.input_text or ""
+    exp_text = payload.expected_text or ""
+    if (
+        len(in_text.encode("utf-8", errors="replace")) > MAX_EDITABLE_SAMPLE_BYTES
+        or len(exp_text.encode("utf-8", errors="replace")) > MAX_EDITABLE_SAMPLE_BYTES
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Edited sample content exceeds the {MAX_EDITABLE_SAMPLE_BYTES}-byte limit.",
+        )
+
+    overrides_dir = _get_sample_overrides_dir(contest_id, prob.problem_id, session_id)
+    ov_in = overrides_dir / f"{stem}.in"
+    ov_ans = overrides_dir / f"{stem}.ans"
+
+    with open(ov_in, "w", encoding="utf-8", errors="replace", newline="\n") as f:
+        f.write(in_text)
+    with open(ov_ans, "w", encoding="utf-8", errors="replace", newline="\n") as f:
+        f.write(exp_text)
+
+    return _build_sample_item(stem, canon_in, canon_ans, desc_file, overrides_dir)
+
+
+@app.delete("/api/problems/{contest_id}/{problem_id}/sample-tests/{sample_name}", response_model=SampleTestCaseItem)
+def reset_sample_test(
+    contest_id: str,
+    problem_id: str,
+    sample_name: str,
+    session_id: Optional[str] = Depends(get_session_id),
+):
+    """Resets a single edited sample test case back to the original contest file."""
+    _, prob = get_contest_and_problem(contest_id, problem_id)
+    problem_dir = WORKSPACES_ROOT / contest_id / prob.problem_id
+    stem, canon_in, canon_ans, desc_file = _resolve_canonical_sample_entry(problem_dir, sample_name)
+    overrides_dir = _get_sample_overrides_dir(contest_id, prob.problem_id, session_id)
+
+    for ext in (".in", ".ans"):
+        target = overrides_dir / f"{stem}{ext}"
+        if target.exists() and target.is_file():
+            target.unlink(missing_ok=True)
+
+    return _build_sample_item(stem, canon_in, canon_ans, desc_file, overrides_dir)
+
+
+@app.delete("/api/problems/{contest_id}/{problem_id}/sample-tests", response_model=list[SampleTestCaseItem])
+def reset_all_sample_tests(
+    contest_id: str,
+    problem_id: str,
+    session_id: Optional[str] = Depends(get_session_id),
+):
+    """Resets all edited sample test cases for this problem back to original contest files."""
+    _, prob = get_contest_and_problem(contest_id, problem_id)
+    problem_dir = WORKSPACES_ROOT / contest_id / prob.problem_id
+    overrides_dir = _get_sample_overrides_dir(contest_id, prob.problem_id, session_id)
+
+    for f in overrides_dir.iterdir():
+        if f.is_file():
+            f.unlink(missing_ok=True)
+
+    return [
+        _build_sample_item(stem, in_file, ans_file, desc_file, overrides_dir)
+        for stem, in_file, ans_file, desc_file in _iter_canonical_samples(problem_dir)
+    ]
 
 
 # =====================================================================

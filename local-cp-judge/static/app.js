@@ -57,6 +57,9 @@ const state = {
   isWordWrap: localStorage.getItem("local_cp_word_wrap") === "true",
   isMonacoReady: false,
   testResults: [],
+  sampleTests: [],
+  activeSampleName: null,
+  sampleDirty: false,
   activeFilter: "all",
   activeEventSource: null,
   isJudging: false,
@@ -208,7 +211,24 @@ const elements = {
   chkFailFast: document.getElementById("chk-fail-fast"),
   viewTabs: document.querySelectorAll(".view-tab"),
   viewVerdicts: document.getElementById("view-verdicts"),
+  viewSamples: document.getElementById("view-samples"),
   viewCustom: document.getElementById("view-custom"),
+  sampleEditedDot: document.getElementById("sample-edited-dot"),
+
+  // Sample Test Cases Editor View
+  sampleEmptyState: document.getElementById("sample-empty-state"),
+  sampleEditorWrap: document.getElementById("sample-editor-wrap"),
+  sampleCasePills: document.getElementById("sample-case-pills"),
+  sampleEditedBadge: document.getElementById("sample-edited-badge"),
+  sampleSaveIndicator: document.getElementById("sample-save-indicator"),
+  btnResetSample: document.getElementById("btn-reset-sample"),
+  btnResetAllSamples: document.getElementById("btn-reset-all-samples"),
+  btnSaveSample: document.getElementById("btn-save-sample"),
+  btnRunEditedSamples: document.getElementById("btn-run-edited-samples"),
+  sampleDescNote: document.getElementById("sample-desc-note"),
+  sampleTruncatedNote: document.getElementById("sample-truncated-note"),
+  sampleEditInput: document.getElementById("sample-edit-input"),
+  sampleEditExpected: document.getElementById("sample-edit-expected"),
 
   // Judge Verdicts View
   progressBar: document.getElementById("judge-progress-bar"),
@@ -285,6 +305,7 @@ const elements = {
   lcDiffEditorWrapper: document.getElementById("lc-diff-editor-wrapper"),
   lcMonacoDiffContainer: document.getElementById("lc-monaco-diff-container"),
   lcActualGroup: document.getElementById("lc-actual-group"),
+  btnEditActiveSample: document.getElementById("btn-edit-active-sample"),
   btnPinActiveTest: document.getElementById("btn-pin-active-test"),
 
   // Stress Tester Elements
@@ -1490,7 +1511,11 @@ async function selectProblem(problemId) {
   populateReferenceSelector(problem.reference_submissions);
   populateStressRefSelector(problem.reference_submissions);
 
-  // Load custom tests for this problem
+  // Load sample tests & custom tests for this problem
+  state.sampleTests = [];
+  state.activeSampleName = null;
+  state.sampleDirty = false;
+  loadSampleTestsList();
   loadCustomTestsList();
 
   // Reset judge cards and results
@@ -1672,10 +1697,12 @@ async function startJudging(suite) {
   toggleConsole(true);
 
   // Switch to Test Verdicts view
-  elements.viewTabs.forEach((t) => t.classList.toggle("active", t.dataset.view === "verdicts"));
-  if (elements.viewVerdicts) elements.viewVerdicts.classList.add("active");
-  if (elements.viewCustom) elements.viewCustom.classList.remove("active");
-  if (elements.viewStress) elements.viewStress.classList.remove("active");
+  setConsoleView("verdicts");
+
+  // Auto-save any edited sample testcase before running sample suite
+  if (suite === "sample" && state.sampleDirty && state.activeSampleName) {
+    await saveActiveSampleTest({ silent: true });
+  }
 
   // Auto-save code first if in workspace mode
   if (!state.isReferenceMode && state.isDirty) {
@@ -1823,6 +1850,8 @@ function clearJudgeView() {
   if (elements.summaryBanner) elements.summaryBanner.style.display = "none";
   if (elements.testCardsList) elements.testCardsList.innerHTML = "";
   state.testResults = [];
+  state.activeTestcase = null;
+  if (elements.btnEditActiveSample) elements.btnEditActiveSample.style.display = "none";
   state.isAllTestsOpen = false;
   if (elements.lcAllTestsTable) elements.lcAllTestsTable.style.display = "none";
   if (elements.lcAllTestsChevron) elements.lcAllTestsChevron.style.transform = "rotate(0deg)";
@@ -1982,6 +2011,11 @@ function selectTestcaseDetail(tc) {
   if (!tc) return;
   state.activeTestcase = tc;
 
+  // Edit option strictly restricted to canonical sample testcases (never secret or custom)
+  if (elements.btnEditActiveSample) {
+    elements.btnEditActiveSample.style.display = tc.suite === "sample" ? "inline-flex" : "none";
+  }
+
   if (elements.lcInputContent) {
     elements.lcInputContent.textContent = tc.input_preview || "(empty stdin)";
   }
@@ -2135,10 +2169,7 @@ async function loadCustomTestsList() {
       item.querySelector(".btn-load-tc").addEventListener("click", () => {
         elements.customStdinInput.value = tc.input_text;
         // Switch tab to Custom Input view
-        elements.viewTabs.forEach((t) => t.classList.toggle("active", t.dataset.view === "custom"));
-        elements.viewVerdicts.classList.remove("active");
-        elements.viewCustom.classList.add("active");
-        if (elements.viewStress) elements.viewStress.classList.remove("active");
+        setConsoleView("custom");
       });
 
       item.querySelector(".btn-del-tc").addEventListener("click", async () => {
@@ -2181,6 +2212,215 @@ async function deleteCustomTest(name) {
     await loadCustomTestsList();
   } catch (err) {
     alert(`Could not delete testcase: ${err.message}`);
+  }
+}
+
+// =====================================================================
+// Console View Switcher & Sample Test Cases Editor (Sample Suite Only)
+// =====================================================================
+
+function setConsoleView(targetView) {
+  elements.viewTabs.forEach((t) => t.classList.toggle("active", t.dataset.view === targetView));
+  if (elements.viewVerdicts) elements.viewVerdicts.classList.toggle("active", targetView === "verdicts");
+  if (elements.viewSamples) elements.viewSamples.classList.toggle("active", targetView === "samples");
+  if (elements.viewCustom) elements.viewCustom.classList.toggle("active", targetView === "custom");
+  if (elements.viewStress) elements.viewStress.classList.toggle("active", targetView === "stress");
+}
+
+function setSampleSaveStatus(text, statusClass = "") {
+  if (!elements.sampleSaveIndicator) return;
+  elements.sampleSaveIndicator.textContent = text || "";
+  elements.sampleSaveIndicator.className = statusClass
+    ? `sample-save-status ${statusClass}`
+    : "sample-save-status";
+}
+
+function getActiveSampleCase() {
+  return state.sampleTests.find((s) => s.name === state.activeSampleName) || null;
+}
+
+function renderSampleEditor() {
+  if (!elements.sampleEditorWrap || !elements.sampleEmptyState) return;
+  const tests = state.sampleTests || [];
+  const anyEdited = tests.some((t) => t.is_edited);
+
+  if (elements.sampleEditedDot) {
+    elements.sampleEditedDot.style.display = anyEdited ? "inline-block" : "none";
+  }
+
+  if (tests.length === 0) {
+    elements.sampleEmptyState.style.display = "flex";
+    elements.sampleEditorWrap.style.display = "none";
+    return;
+  }
+
+  elements.sampleEmptyState.style.display = "none";
+  elements.sampleEditorWrap.style.display = "flex";
+
+  if (!state.activeSampleName || !tests.some((t) => t.name === state.activeSampleName)) {
+    state.activeSampleName = tests[0].name;
+  }
+
+  if (elements.sampleCasePills) {
+    elements.sampleCasePills.innerHTML = "";
+    tests.forEach((tc, idx) => {
+      const pill = document.createElement("button");
+      pill.type = "button";
+      const isActive = tc.name === state.activeSampleName;
+      pill.className = `lc-case-pill${tc.is_edited ? " edited" : ""}${isActive ? " active" : ""}`;
+      pill.textContent = `Sample ${idx + 1}`;
+      pill.title = tc.test_name + (tc.is_edited ? " (Modified)" : "");
+      pill.addEventListener("click", () => selectSampleCase(tc.name));
+      elements.sampleCasePills.appendChild(pill);
+    });
+  }
+
+  const active = getActiveSampleCase();
+  if (!active) return;
+
+  if (elements.sampleEditInput) {
+    elements.sampleEditInput.value = active.input_text || "";
+    elements.sampleEditInput.disabled = Boolean(active.is_truncated);
+  }
+  if (elements.sampleEditExpected) {
+    elements.sampleEditExpected.value = active.expected_text || "";
+    elements.sampleEditExpected.disabled = Boolean(active.is_truncated);
+  }
+  if (elements.btnSaveSample) {
+    elements.btnSaveSample.disabled = Boolean(active.is_truncated);
+  }
+  if (elements.sampleEditedBadge) {
+    elements.sampleEditedBadge.style.display = active.is_edited ? "inline-flex" : "none";
+  }
+  if (elements.btnResetSample) {
+    elements.btnResetSample.style.display = active.is_edited ? "inline-flex" : "none";
+  }
+  if (elements.btnResetAllSamples) {
+    elements.btnResetAllSamples.style.display = anyEdited ? "inline-flex" : "none";
+  }
+  if (elements.sampleDescNote) {
+    if (active.description) {
+      elements.sampleDescNote.style.display = "block";
+      elements.sampleDescNote.textContent = active.description;
+    } else {
+      elements.sampleDescNote.style.display = "none";
+      elements.sampleDescNote.textContent = "";
+    }
+  }
+  if (elements.sampleTruncatedNote) {
+    elements.sampleTruncatedNote.style.display = active.is_truncated ? "block" : "none";
+  }
+
+  if (!state.sampleDirty) {
+    setSampleSaveStatus(active.is_edited ? "Modified" : "", "");
+  }
+}
+
+async function loadSampleTestsList(preferredName = null) {
+  if (!state.activeContestId || !state.activeProblemId) return;
+  try {
+    const res = await fetch(`/api/problems/${state.activeContestId}/${state.activeProblemId}/sample-tests`);
+    if (!res.ok) return;
+    const tests = await res.json();
+    state.sampleTests = tests;
+    if (preferredName && tests.some((t) => t.name === preferredName)) {
+      state.activeSampleName = preferredName;
+    } else if (!state.activeSampleName || !tests.some((t) => t.name === state.activeSampleName)) {
+      state.activeSampleName = tests.length > 0 ? tests[0].name : null;
+    }
+    state.sampleDirty = false;
+    renderSampleEditor();
+  } catch (err) {
+    console.error("Failed to load sample tests:", err);
+  }
+}
+
+async function selectSampleCase(sampleName) {
+  if (!sampleName) return;
+  if (state.sampleDirty && state.activeSampleName && state.activeSampleName !== sampleName) {
+    await saveActiveSampleTest({ silent: true });
+  }
+  state.activeSampleName = sampleName;
+  state.sampleDirty = false;
+  renderSampleEditor();
+}
+
+async function saveActiveSampleTest({ silent = false } = {}) {
+  if (!state.activeContestId || !state.activeProblemId || !state.activeSampleName) return false;
+  const active = getActiveSampleCase();
+  if (!active || active.is_truncated) return false;
+
+  const inputVal = elements.sampleEditInput ? elements.sampleEditInput.value : "";
+  const expectedVal = elements.sampleEditExpected ? elements.sampleEditExpected.value : "";
+
+  try {
+    const res = await fetch(
+      `/api/problems/${state.activeContestId}/${state.activeProblemId}/sample-tests/${encodeURIComponent(state.activeSampleName)}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input_text: inputVal,
+          expected_text: expectedVal,
+        }),
+      }
+    );
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || "Failed to save sample testcase");
+    }
+    const updated = await res.json();
+    const idx = state.sampleTests.findIndex((t) => t.name === updated.name);
+    if (idx >= 0) {
+      state.sampleTests[idx] = updated;
+    }
+    state.sampleDirty = false;
+    renderSampleEditor();
+    setSampleSaveStatus("Saved", "saved");
+    return true;
+  } catch (err) {
+    if (!silent) {
+      alert(`Could not save sample testcase: ${err.message}`);
+    }
+    return false;
+  }
+}
+
+async function resetSampleCase(sampleName) {
+  if (!state.activeContestId || !state.activeProblemId || !sampleName) return;
+  try {
+    const res = await fetch(
+      `/api/problems/${state.activeContestId}/${state.activeProblemId}/sample-tests/${encodeURIComponent(sampleName)}`,
+      { method: "DELETE" }
+    );
+    if (!res.ok) throw new Error("Failed to reset sample testcase");
+    const restored = await res.json();
+    const idx = state.sampleTests.findIndex((t) => t.name === restored.name);
+    if (idx >= 0) {
+      state.sampleTests[idx] = restored;
+    }
+    state.sampleDirty = false;
+    renderSampleEditor();
+    setSampleSaveStatus("Reset to original", "saved");
+  } catch (err) {
+    alert(`Could not reset sample testcase: ${err.message}`);
+  }
+}
+
+async function resetAllSampleCases() {
+  if (!state.activeContestId || !state.activeProblemId) return;
+  try {
+    const res = await fetch(
+      `/api/problems/${state.activeContestId}/${state.activeProblemId}/sample-tests`,
+      { method: "DELETE" }
+    );
+    if (!res.ok) throw new Error("Failed to reset sample testcases");
+    state.sampleTests = await res.json();
+    state.sampleDirty = false;
+    renderSampleEditor();
+    setSampleSaveStatus("All reset to original", "saved");
+  } catch (err) {
+    alert(`Could not reset sample testcases: ${err.message}`);
   }
 }
 
@@ -2794,17 +3034,59 @@ function initEventListeners() {
     });
   }
 
-  // View tabs (Test Verdicts vs Custom Input vs Stress Tester)
+  // View tabs (Test Verdicts vs Sample Cases vs Custom Input vs Stress Tester)
   elements.viewTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      elements.viewTabs.forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      const targetView = tab.dataset.view;
-      if (elements.viewVerdicts) elements.viewVerdicts.classList.toggle("active", targetView === "verdicts");
-      if (elements.viewCustom) elements.viewCustom.classList.toggle("active", targetView === "custom");
-      if (elements.viewStress) elements.viewStress.classList.toggle("active", targetView === "stress");
+      setConsoleView(tab.dataset.view);
     });
   });
+
+  // Sample Test Cases Editor Actions (Sample Suite Only)
+  if (elements.btnEditActiveSample) {
+    elements.btnEditActiveSample.addEventListener("click", async () => {
+      if (!state.activeTestcase || state.activeTestcase.suite !== "sample") return;
+      const stem = (state.activeTestcase.test_name || "").replace(/^sample\//, "");
+      if (!stem) return;
+      await loadSampleTestsList(stem);
+      setConsoleView("samples");
+      if (elements.sampleEditInput && !elements.sampleEditInput.disabled) {
+        elements.sampleEditInput.focus();
+      }
+    });
+  }
+  const handleSampleInputChange = () => {
+    state.sampleDirty = true;
+    setSampleSaveStatus("Unsaved changes", "dirty");
+  };
+  const handleSampleKeydown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      e.stopPropagation();
+      saveActiveSampleTest();
+    }
+  };
+  if (elements.sampleEditInput) {
+    elements.sampleEditInput.addEventListener("input", handleSampleInputChange);
+    elements.sampleEditInput.addEventListener("keydown", handleSampleKeydown);
+  }
+  if (elements.sampleEditExpected) {
+    elements.sampleEditExpected.addEventListener("input", handleSampleInputChange);
+    elements.sampleEditExpected.addEventListener("keydown", handleSampleKeydown);
+  }
+  if (elements.btnSaveSample) {
+    elements.btnSaveSample.addEventListener("click", () => saveActiveSampleTest());
+  }
+  if (elements.btnResetSample) {
+    elements.btnResetSample.addEventListener("click", () => {
+      if (state.activeSampleName) resetSampleCase(state.activeSampleName);
+    });
+  }
+  if (elements.btnResetAllSamples) {
+    elements.btnResetAllSamples.addEventListener("click", () => resetAllSampleCases());
+  }
+  if (elements.btnRunEditedSamples) {
+    elements.btnRunEditedSamples.addEventListener("click", () => startJudging("sample"));
+  }
 
   // Diff Mode Switcher
   if (elements.btnModeText) {

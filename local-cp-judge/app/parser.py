@@ -135,11 +135,13 @@ def get_problem_test_cases(
     problem_dir: Path,
     suite: str = "all",
     custom_tests_dir: Optional[Path] = None,
+    sample_overrides_dir: Optional[Path] = None,
 ) -> list[TestCaseInfo]:
     """
     Scan and return test cases for the specified problem folder.
     Supports suite='sample', 'secret', 'custom', or 'all'.
     Pairs .in files with corresponding .ans (or .out) and optional .desc files.
+    Applies optional session-isolated sample_overrides_dir strictly to canonical sample stems.
     Applies natural alphanumeric sorting and filters out macOS resource forks.
     """
     suites_to_scan: list[str] = []
@@ -174,6 +176,13 @@ def get_problem_test_cases(
         # Natural alphanumeric sort: 1, 2, ..., 10
         in_files.sort(key=lambda f: natural_sort_key(f.stem))
 
+        use_sample_overrides = (
+            current_suite == "sample"
+            and sample_overrides_dir is not None
+            and sample_overrides_dir.exists()
+            and sample_overrides_dir.is_dir()
+        )
+
         for in_file in in_files:
             stem = in_file.stem
 
@@ -183,6 +192,16 @@ def get_problem_test_cases(
                 out_alt = suite_dir / f"{stem}.out"
                 if out_alt.exists():
                     ans_file = out_alt
+
+            effective_in = in_file
+            effective_ans = ans_file
+            if use_sample_overrides:
+                ov_in = sample_overrides_dir / f"{stem}.in"
+                if ov_in.exists() and ov_in.is_file():
+                    effective_in = ov_in
+                ov_ans = sample_overrides_dir / f"{stem}.ans"
+                if ov_ans.exists() and ov_ans.is_file():
+                    effective_ans = ov_ans
 
             # Optional .desc description file
             desc_file = suite_dir / f"{stem}.desc"
@@ -195,15 +214,15 @@ def get_problem_test_cases(
 
             input_size_bytes = 0
             try:
-                input_size_bytes = in_file.stat().st_size
+                input_size_bytes = effective_in.stat().st_size
             except OSError:
                 input_size_bytes = 0
 
             results.append(TestCaseInfo(
                 name=f"{current_suite}/{stem}",
                 suite=current_suite,
-                in_path=str(in_file.resolve()),
-                ans_path=str(ans_file.resolve()),
+                in_path=str(effective_in.resolve()),
+                ans_path=str(effective_ans.resolve()),
                 desc_path=str(desc_file.resolve()) if desc_file.exists() else None,
                 description=desc_text,
                 input_size_bytes=input_size_bytes,

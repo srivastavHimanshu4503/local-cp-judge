@@ -387,6 +387,10 @@
             <button class="view-tab active" data-view="verdicts">
               <span>Test Verdicts</span>
             </button>
+            <button class="view-tab" data-view="samples">
+              <span>Sample Cases</span>
+              <span id="sample-edited-dot" class="tab-edited-dot" style="display: none;" title="Sample test cases modified"></span>
+            </button>
             <button class="view-tab" data-view="custom">
               <span>Custom Input</span>
             </button>
@@ -471,6 +475,10 @@
                     <div class="lc-io-header">
                       <span class="lc-io-label">Input</span>
                       <div class="lc-io-actions">
+                        <button id="btn-edit-active-sample" class="btn btn-xs btn-outline" style="display: none;" title="Edit this sample testcase">
+                          <i data-lucide="pencil"></i>
+                          <span>Edit Sample</span>
+                        </button>
                         <button id="btn-pin-active-test" class="btn btn-xs btn-outline" title="Pin this testcase to My Tests">
                           <i data-lucide="pin"></i>
                           <span>Pin to My Tests</span>
@@ -550,6 +558,64 @@
             <div id="test-cards-list" class="test-cards-list" style="display: none;"></div>
             <div id="judge-summary-banner" style="display: none;"><span id="summary-verdict-badge"></span><span id="metric-passed"></span><span id="metric-time"></span><span id="metric-memory"></span></div>
             <div class="test-filters" style="display: none;"><span id="filter-all-count"></span><span id="filter-failed-count"></span><span id="filter-sample-count"></span><span id="filter-secret-count"></span></div>
+          </div>
+
+          <!-- Sample Test Cases Editor View (Sample Suite Only) -->
+          <div id="view-samples" class="judge-view-content">
+            <div id="sample-empty-state" class="empty-state runner-empty" style="display: none;">
+              <p>No sample test cases available for this problem. Use <strong>Custom Input</strong> to test custom cases.</p>
+            </div>
+
+            <div id="sample-editor-wrap" class="sample-editor-wrap">
+              <div class="sample-toolbar">
+                <div class="sample-toolbar-left">
+                  <div id="sample-case-pills" class="lc-case-pills"></div>
+                  <span id="sample-edited-badge" class="badge-tag sample-edited-badge" style="display: none;">Modified</span>
+                  <span id="sample-save-indicator" class="sample-save-status"></span>
+                </div>
+                <div class="sample-toolbar-actions">
+                  <button id="btn-reset-sample" class="btn btn-xs btn-outline" style="display: none;" title="Restore this sample testcase to original">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>Reset Case</span>
+                  </button>
+                  <button id="btn-reset-all-samples" class="btn btn-xs btn-outline-subtle" style="display: none;" title="Restore all sample testcases to original">
+                    <span>Reset All</span>
+                  </button>
+                  <button id="btn-save-sample" class="btn btn-xs btn-outline" title="Save sample edits (Ctrl+S)">
+                    <i data-lucide="save"></i>
+                    <span>Save Sample</span>
+                  </button>
+                  <button id="btn-run-edited-samples" class="btn btn-xs btn-run-samples" title="Save and run sample testcases">
+                    <i data-lucide="play"></i>
+                    <span>Run Samples</span>
+                  </button>
+                </div>
+              </div>
+
+              <div id="sample-desc-note" class="sample-desc-note" style="display: none;"></div>
+              <div id="sample-truncated-note" class="sample-truncated-note" style="display: none;">
+                This sample test case exceeds 64 KB and is read-only in the UI.
+              </div>
+
+              <div class="sample-io-grid">
+                <div class="sample-io-pane">
+                  <div class="lc-io-header">
+                    <span class="lc-io-label">Sample Input (stdin)</span>
+                  </div>
+                  <textarea id="sample-edit-input" class="sample-textarea" spellcheck="false" placeholder="Sample standard input..."></textarea>
+                </div>
+                <div class="sample-io-pane">
+                  <div class="lc-io-header">
+                    <span class="lc-io-label">Expected Output (stdout)</span>
+                  </div>
+                  <textarea id="sample-edit-expected" class="sample-textarea" spellcheck="false" placeholder="Expected standard output..."></textarea>
+                </div>
+              </div>
+
+              <div class="sample-hint-footer">
+                Sample test cases only (secret tests remain locked). Saved edits apply when you <strong>Run Samples</strong>; <strong>Judge All</strong> runs the official contest tests.
+              </div>
+            </div>
           </div>
 
           <!-- Custom Input View -->
