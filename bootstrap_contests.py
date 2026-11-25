@@ -7,6 +7,7 @@ APP_ROOT = ROOT / "local-cp-judge"
 sys.path.insert(0, str(APP_ROOT))
 
 from app.parser import extract_and_parse_contest
+from populate_15oct_statements import populate_15oct_statements
 
 
 def main() -> None:
@@ -27,6 +28,10 @@ def main() -> None:
         print(f"[EXTRACT] {zp.name} -> {contest_dir} ...")
         meta = extract_and_parse_contest(zp, workspaces_root, templates_dir)
         print(f"  -> Ready: {meta.title} ({len(meta.problems)} problems)")
+
+    updated_15oct = populate_15oct_statements(workspaces_root)
+    if updated_15oct:
+        print(f"[STATEMENTS] Populated {updated_15oct} Markdown/HTML statements for 15oct-contest.")
 
 
 if __name__ == "__main__":

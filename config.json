@@ -1,7 +1,6 @@
 {
   "host": "127.0.0.1",
   "port": 8080,
-  "cpp_compiler": "g++",
   "python_cmd": "python",
   "javac_cmd": "javac",
   "java_cmd": "java",
