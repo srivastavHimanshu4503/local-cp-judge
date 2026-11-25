@@ -123,6 +123,10 @@
           </button>
         </div>
         <div class="statement-header-actions">
+          <button id="btn-toggle-pdf" class="btn btn-xs btn-outline-subtle btn-view-pdf" style="display: none;" title="Switch between Dark Markdown and original PDF">
+            <i data-lucide="file-text"></i>
+            <span>View PDF</span>
+          </button>
           <button id="btn-open-pdf-ext" class="btn-icon btn-tiny" title="Open Statement in New Tab">
             <i data-lucide="external-link"></i>
           </button>
@@ -277,17 +281,16 @@
     <div id="workspace-right" class="workspace-right">
       <!-- Upper Section: Consolidated Code Editor -->
       <section id="pane-editor" class="pane pane-editor">
-        <!-- Unified 40px Editor Tab Bar -->
+        <!-- Unified 44px Editor Toolbar -->
         <div class="editor-tabbar">
-          <div class="lang-tabs" id="lang-tabs">
-            <button class="lang-tab active" data-lang="python">
-              <span class="lang-badge lang-py">PY</span>
-              <span>solution.py</span>
-            </button>
-            <button class="lang-tab" data-lang="java">
-              <span class="lang-badge lang-java">JV</span>
-              <span>Main.java</span>
-            </button>
+          <div class="editor-tabbar-left">
+            <div class="lang-select-wrap">
+              <i data-lucide="code-2" class="lang-select-icon"></i>
+              <select id="lang-select" class="select-compact select-lang" title="Select Programming Language">
+                <option value="python">Python 3 (solution.py)</option>
+                <option value="java">Java (Main.java)</option>
+              </select>
+            </div>
           </div>
 
           <div class="editor-tabbar-right">
@@ -349,7 +352,7 @@
               <button id="btn-zoom-out" class="btn-zoom" title="Zoom Out (Ctrl + -)">
                 <i data-lucide="minus"></i>
               </button>
-              <button id="btn-zoom-reset" class="zoom-level-badge" title="Reset Font Size to 14px (Ctrl + 0)">
+              <button id="btn-zoom-reset" class="zoom-level-badge" title="Reset Font Size to 16px (Ctrl + 0)">
                 <span id="zoom-level-text">100%</span>
               </button>
               <button id="btn-zoom-in" class="btn-zoom" title="Zoom In (Ctrl + +)">

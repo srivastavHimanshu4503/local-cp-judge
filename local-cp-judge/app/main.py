@@ -286,48 +286,328 @@ def get_single_contest(contest_id: str) -> ContestMeta:
         )
 
 
+OBSIDIAN_STATEMENT_CSS = """<style id="obsidian-markdown-v2">
+/* obsidian-markdown-v2 */
+:root {
+  --ink: #D4D4D8 !important;
+  --muted: #A1A1AA !important;
+  --accent: #FAFAFA !important;
+  --paper: #09090B !important;
+  --panel: #111115 !important;
+  --rule: #27272A !important;
+  --line: #27272A !important;
+  --bg-app: #09090B !important;
+  --bg-panel: #111115 !important;
+  --bg-surface-subtle: #18181B !important;
+  --border-subtle: #27272A !important;
+  --text-primary: #FAFAFA !important;
+  --text-secondary: #D4D4D8 !important;
+  --text-muted: #A1A1AA !important;
+}
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #27272A transparent;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272A; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+html {
+  background: #09090B !important;
+  color: #D4D4D8 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body {
+  background: #09090B !important;
+  color: #D4D4D8 !important;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 16.5px !important;
+  line-height: 1.72 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 24px 28px 40px !important;
+  -webkit-font-smoothing: antialiased;
+}
+main, .statement-container {
+  max-width: 82ch !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+header, header#title-block-header {
+  margin: 0 0 18px 0 !important;
+  text-align: left !important;
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid #27272A !important;
+}
+h1, h1.title, .title-row h1 {
+  font-size: 25px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: #FAFAFA !important;
+  margin: 0 0 8px 0 !important;
+}
+.letter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #10B981 !important;
+  margin: 0 0 6px 0 !important;
+}
+h1 .letter {
+  font-size: 1.05em !important;
+  color: #10B981 !important;
+  margin-right: 0.35em !important;
+}
+h2, .section-title {
+  font-size: 19px !important;
+  line-height: 1.35 !important;
+  font-weight: 600 !important;
+  color: #FAFAFA !important;
+  margin: 24px 0 10px 0 !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid #27272A !important;
+}
+h3 {
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  color: #F4F4F5 !important;
+  margin: 18px 0 8px 0 !important;
+}
+p, li {
+  font-size: 16.5px !important;
+  line-height: 1.72 !important;
+  color: #D4D4D8 !important;
+  max-width: none !important;
+}
+p { margin: 0 0 12px 0 !important; }
+ul, ol { padding-left: 1.45em !important; margin: 8px 0 14px 0 !important; }
+li { margin: 4px 0 !important; }
+strong, b { color: #FAFAFA !important; font-weight: 600 !important; }
+em, .subtitle, .meta, h1 + p em {
+  color: #A1A1AA !important;
+  font-size: 14.5px !important;
+}
+.explain, .example-explanation {
+  font-size: 15.5px !important;
+  line-height: 1.68 !important;
+  color: #D4D4D8 !important;
+}
+.sample h3, .example h3 {
+  font-size: 14.5px !important;
+  color: #A1A1AA !important;
+  margin: 0 0 6px 0 !important;
+}
+hr, .page-break {
+  border-color: #27272A !important;
+}
+a, a:visited, .source-link { color: #60A5FA !important; font-size: 14px !important; }
+.meta-chip {
+  font-size: 13px !important;
+  padding: 4px 11px !important;
+  background: #18181B !important;
+  border: 1px solid #27272A !important;
+  color: #D4D4D8 !important;
+}
+code {
+  background: #18181B !important;
+  border: 1px solid #27272A !important;
+  color: #FAFAFA !important;
+  font-family: "JetBrains Mono", Consolas, monospace !important;
+  font-size: 0.9em !important;
+  padding: 2px 6px !important;
+  border-radius: 5px !important;
+}
+pre, div.sourceCode, .io-card, .insight-box {
+  background: #111115 !important;
+  border: 1px solid #27272A !important;
+  border-radius: 10px !important;
+  color: #FAFAFA !important;
+}
+pre {
+  border-left: 3px solid #3F3F46 !important;
+  padding: 12px 16px !important;
+  margin: 10px 0 16px 0 !important;
+  font-family: "JetBrains Mono", Consolas, monospace !important;
+  font-size: 14.5px !important;
+  line-height: 1.58 !important;
+  overflow-x: auto !important;
+}
+pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: 14.5px !important;
+}
+.io-card .io-header {
+  background: #18181B !important;
+  border-bottom: 1px solid #27272A !important;
+  font-size: 13.5px !important;
+  color: #E4E4E7 !important;
+}
+.io-card .io-body {
+  font-size: 14.5px !important;
+  color: #FAFAFA !important;
+}
+table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 12px 0 18px 0 !important;
+  font-size: 15px !important;
+  display: table !important;
+}
+tbody { border-color: #27272A !important; }
+th {
+  background: #18181B !important;
+  color: #FAFAFA !important;
+  border: 1px solid #27272A !important;
+  padding: 8px 12px !important;
+}
+td {
+  background: #09090B !important;
+  color: #D4D4D8 !important;
+  border: 1px solid #27272A !important;
+  padding: 8px 12px !important;
+}
+blockquote {
+  background: #111115 !important;
+  border: 1px solid #27272A !important;
+  border-left: 3px solid #10B981 !important;
+  color: #D4D4D8 !important;
+  padding: 12px 16px !important;
+  margin: 14px 0 !important;
+  border-radius: 8px !important;
+}
+blockquote p { margin: 0 !important; }
+</style>"""
+
+
+def _render_plain_markdown_to_html(md_text: str, title: str = "Problem Statement") -> str:
+    """Lightweight Markdown-to-HTML fallback when only .md or extracted PDF text is present."""
+    import html as html_lib
+
+    lines = md_text.splitlines()
+    out: list[str] = []
+    in_code = False
+    in_list = False
+    for line in lines:
+        if line.strip().startswith("```"):
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            if not in_code:
+                out.append("<pre><code>")
+                in_code = True
+            else:
+                out.append("</code></pre>")
+                in_code = False
+            continue
+        if in_code:
+            out.append(html_lib.escape(line))
+            continue
+        s = line.strip()
+        if not s:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            continue
+        if s.startswith("# "):
+            if in_list: out.append("</ul>"); in_list = False
+            out.append(f"<h1>{html_lib.escape(s[2:].strip())}</h1>")
+        elif s.startswith("## "):
+            if in_list: out.append("</ul>"); in_list = False
+            out.append(f"<h2>{html_lib.escape(s[3:].strip())}</h2>")
+        elif s.startswith("### "):
+            if in_list: out.append("</ul>"); in_list = False
+            out.append(f"<h3>{html_lib.escape(s[4:].strip())}</h3>")
+        elif s.startswith(("- ", "* ")):
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            item = re.sub(r"`([^`]+)`", lambda m: f"<code>{html_lib.escape(m.group(1))}</code>", html_lib.escape(s[2:].strip()))
+            out.append(f"<li>{item}</li>")
+        else:
+            if in_list: out.append("</ul>"); in_list = False
+            para = re.sub(r"`([^`]+)`", lambda m: f"<code>{html_lib.escape(m.group(1))}</code>", html_lib.escape(s))
+            para = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)
+            out.append(f"<p>{para}</p>")
+    if in_list:
+        out.append("</ul>")
+    if in_code:
+        out.append("</code></pre>")
+    return f"<!doctype html><html><head><meta charset='utf-8'><title>{html_lib.escape(title)}</title></head><body><main>{''.join(out)}</main></body></html>"
+
+
+def _inject_obsidian_css(raw_html: str) -> str:
+    """Appends Obsidian Dark Markdown CSS last in document order so it overrides any legacy styles."""
+    if "obsidian-markdown-v2" in raw_html:
+        return raw_html
+    if "</body>" in raw_html:
+        return raw_html.replace("</body>", OBSIDIAN_STATEMENT_CSS + "\n</body>", 1)
+    if "</html>" in raw_html:
+        return raw_html.replace("</html>", OBSIDIAN_STATEMENT_CSS + "\n</html>", 1)
+    return raw_html + "\n" + OBSIDIAN_STATEMENT_CSS
+
+
 @app.get("/api/problems/{contest_id}/{problem_id}/statement")
-def get_problem_statement(contest_id: str, problem_id: str):
-    """Serves the problem statement (PDF or HTML) based on availability."""
+def get_problem_statement(
+    contest_id: str,
+    problem_id: str,
+    format: str = Query(default="auto"),
+):
+    """Serves unified dark Markdown/HTML statement by default, or PDF when format='pdf'."""
     _, prob = get_contest_and_problem(contest_id, problem_id)
     problem_dir = WORKSPACES_ROOT / contest_id / problem_id
+    req_fmt = (format or "auto").lower().strip()
 
-    # 1. Check for PDF statement
-    for candidate in [problem_dir / "problem.pdf", problem_dir / "statement" / "problem.pdf"]:
+    pdf_candidates = [problem_dir / "problem.pdf", problem_dir / "statement" / "problem.pdf"]
+
+    # Explicit PDF request
+    if req_fmt == "pdf":
+        for candidate in pdf_candidates:
+            if candidate.exists() and candidate.is_file():
+                return FileResponse(
+                    path=candidate,
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": "inline; filename=problem.pdf"},
+                )
+
+    # 1. Prefer HTML statements and wrap/override uniformly in Obsidian Dark Markdown v2
+    for candidate in [problem_dir / "statement.html", problem_dir / "problem.html", problem_dir / "statement" / "problem.html"]:
         if candidate.exists() and candidate.is_file():
+            raw_html = _inject_obsidian_css(candidate.read_text(encoding="utf-8", errors="replace"))
+            return HTMLResponse(content=raw_html)
+
+    # 2. Markdown fallback if only .md exists
+    for candidate in [problem_dir / "problem.md", problem_dir / "statement.md", problem_dir / "statement" / "problem.md"]:
+        if candidate.exists() and candidate.is_file():
+            md_html = _render_plain_markdown_to_html(candidate.read_text(encoding="utf-8", errors="replace"), title=prob.name)
+            return HTMLResponse(content=_inject_obsidian_css(md_html))
+
+    # 3. PDF-only fallback (try pdftotext -> dark view, else inline PDF)
+    for candidate in pdf_candidates:
+        if candidate.exists() and candidate.is_file():
+            pdftotext_cmd = shutil.which("pdftotext") or (
+                r"C:\Program Files\poppler-25.12.0\Library\bin\pdftotext.exe"
+                if Path(r"C:\Program Files\poppler-25.12.0\Library\bin\pdftotext.exe").exists()
+                else None
+            )
+            if req_fmt != "pdf" and pdftotext_cmd:
+                try:
+                    ext = subprocess.run([pdftotext_cmd, str(candidate), "-"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
+                    if ext.returncode == 0 and ext.stdout.strip():
+                        md_html = _render_plain_markdown_to_html(ext.stdout, title=prob.name)
+                        return HTMLResponse(content=_inject_obsidian_css(md_html))
+                except Exception:
+                    pass
             return FileResponse(
                 path=candidate,
                 media_type="application/pdf",
                 headers={"Content-Disposition": "inline; filename=problem.pdf"},
             )
-
-    # 2. Check for HTML statement (inject Obsidian dark theme + scrollbar override for legacy statements)
-    for candidate in [problem_dir / "statement.html", problem_dir / "problem.html", problem_dir / "statement" / "problem.html"]:
-        if candidate.exists() and candidate.is_file():
-            raw_html = candidate.read_text(encoding="utf-8", errors="replace")
-            if "obsidian-statement-theme" not in raw_html:
-                obsidian_override = """<style>
-/* obsidian-statement-theme */
-:root { --ink: #A1A1AA !important; --muted: #71717A !important; --accent: #E4E4E7 !important; --paper: #09090B !important; --panel: #111115 !important; --rule: #27272A !important; --line: #27272A !important; }
-* { scrollbar-width: thin; scrollbar-color: #27272A transparent; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #27272A; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
-html, body { background: #09090B !important; color: #A1A1AA !important; font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; font-size: 14px !important; line-height: 1.65 !important; }
-main { max-width: 72ch !important; padding: 24px 28px !important; }
-h1, h2, h3, strong { color: #FAFAFA !important; }
-h1 .letter { color: #10B981 !important; }
-pre, code { background: #111115 !important; border-color: #27272A !important; color: #FAFAFA !important; font-family: "JetBrains Mono", Consolas, monospace !important; }
-pre { border: 1px solid #27272A !important; border-radius: 8px !important; padding: 10px 12px !important; }
-th { background: #18181B !important; color: #FAFAFA !important; }
-th, td, blockquote { border-color: #27272A !important; }
-</style>"""
-                if "</head>" in raw_html:
-                    raw_html = raw_html.replace("</head>", obsidian_override + "\n</head>", 1)
-                else:
-                    raw_html = obsidian_override + raw_html
-            return HTMLResponse(content=raw_html)
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -337,8 +617,8 @@ th, td, blockquote { border-color: #27272A !important; }
 
 @app.get("/api/problems/{contest_id}/{problem_id}/pdf")
 def get_problem_pdf(contest_id: str, problem_id: str):
-    """Serves the problem statement PDF or fallback HTML with inline content disposition."""
-    return get_problem_statement(contest_id, problem_id)
+    """Serves the problem statement PDF with inline content disposition."""
+    return get_problem_statement(contest_id, problem_id, format="pdf")
 
 
 @app.get("/api/problems/{contest_id}/{problem_id}/code", response_model=CodeResponse)

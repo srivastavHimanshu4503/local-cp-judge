@@ -33,8 +33,8 @@
   --radius-control: 8px;
   --radius-card: 10px;
   --radius-pill: 9999px;
-  --header-height: 52px;
-  --footer-height: 44px;
+  --header-height: 54px;
+  --footer-height: 48px;
 
   /* Semantic Aliases for Legacy / Shared Components */
   --background: var(--bg-app);
@@ -99,8 +99,8 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.55;
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -183,7 +183,7 @@ body {
 }
 
 .brand-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.015em;
   color: var(--text-primary);
@@ -202,12 +202,12 @@ body {
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
-  padding: 0 10px;
+  padding: 0 11px;
   font-family: "Inter", sans-serif;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
-  height: 32px;
-  max-width: 190px;
+  height: 34px;
+  max-width: 195px;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -331,11 +331,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 30px;
-  padding: 0 13px;
+  height: 32px;
+  padding: 0 15px;
   border-radius: 6px;
   font-family: "Inter", sans-serif;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -403,11 +403,11 @@ body {
 }
 
 .timer-display {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
-  min-width: 72px;
+  min-width: 76px;
 }
 
 .contest-timer.running .timer-display {
@@ -449,14 +449,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 12px;
+  height: 34px;
+  padding: 0 13px;
   border-radius: var(--radius-control);
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-family: "Inter", sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -702,8 +702,8 @@ body {
 
 /* Left Pane Header (Description | Submissions) */
 .statement-header {
-  height: 40px;
-  min-height: 40px;
+  height: 44px;
+  min-height: 44px;
   background-color: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -714,30 +714,30 @@ body {
 }
 
 .left-pane-tabs {
-  gap: 18px;
+  gap: 20px;
 }
 
 .left-pane-tabs .left-tab {
-  gap: 6px;
+  gap: 7px;
 }
 
 .left-pane-tabs .left-tab [data-lucide] {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 
 .left-tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
   border-radius: 9999px;
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
   font-family: "JetBrains Mono", monospace;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -749,7 +749,21 @@ body {
 .statement-header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+}
+
+.btn-view-pdf {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  gap: 5px;
+}
+
+.btn-view-pdf.pdf-active {
+  background-color: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34D399;
 }
 
 .left-view-panel {
@@ -766,24 +780,24 @@ body {
 
 .submissions-panel {
   overflow-y: auto;
-  padding: 14px 16px 24px;
+  padding: 16px 18px 28px;
   background-color: var(--bg-app);
-  gap: 14px;
+  gap: 16px;
 }
 
 .sub-empty-hint {
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--text-muted);
-  max-width: 340px;
-  line-height: 1.5;
+  max-width: 380px;
+  line-height: 1.55;
 }
 
 .sub-empty-hint code {
   font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 12.5px;
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
   color: var(--text-secondary);
 }
@@ -791,7 +805,7 @@ body {
 .sub-content-wrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .sub-history-section {
@@ -807,7 +821,7 @@ body {
 }
 
 .sub-section-title {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -818,7 +832,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 176px;
+  max-height: 185px;
   overflow-y: auto;
   padding: 6px;
   background-color: var(--bg-panel);
@@ -832,7 +846,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 7px 10px;
+  padding: 8px 11px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -861,7 +875,7 @@ body {
 }
 
 .sub-hist-kind {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -870,8 +884,8 @@ body {
 
 .sub-hist-lang {
   font-family: "JetBrains Mono", monospace;
-  font-size: 10.5px;
-  padding: 1px 6px;
+  font-size: 12px;
+  padding: 2px 7px;
   border-radius: 4px;
   background-color: var(--bg-app);
   border: 1px solid var(--border-subtle);
@@ -883,7 +897,7 @@ body {
   align-items: center;
   gap: 10px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -891,7 +905,7 @@ body {
 .sub-detail-view {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .sub-error-pre,
@@ -900,10 +914,10 @@ body {
   background-color: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
   color: #E4E4E7;
   white-space: pre-wrap;
   word-break: break-word;
@@ -998,78 +1012,55 @@ body {
 }
 
 /* =====================================================================
-   Unified 40px Editor Tab Bar & Slim 28px Breadcrumb Strip
+   Unified 44px Editor Toolbar & 34px Breadcrumb Strip
    ===================================================================== */
 
 .editor-tabbar {
-  height: 40px;
-  min-height: 40px;
+  height: 44px;
+  min-height: 44px;
   background-color: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
-  padding-right: 10px;
+  padding: 0 12px;
   user-select: none;
 }
 
-.lang-tabs {
+.editor-tabbar-left {
   display: flex;
-  align-items: stretch;
-  height: 100%;
+  align-items: center;
+  gap: 8px;
 }
 
-.lang-tab {
+.lang-select-wrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 14px;
-  background-color: transparent;
-  border: none;
-  border-right: 1px solid var(--border-subtle);
-  border-top: 2px solid transparent;
-  color: var(--text-muted);
-  font-family: "Inter", sans-serif;
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.lang-tab:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
+.lang-select-icon {
+  position: absolute;
+  left: 10px;
+  width: 15px;
+  height: 15px;
+  color: #34D399;
+  pointer-events: none;
 }
 
-.lang-tab.active {
-  background-color: var(--bg-editor);
-  border-top-color: var(--accent-judge);
-  color: var(--text-primary);
-}
-
-.lang-badge {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 9.5px;
-  font-weight: 600;
-  padding: 1px 4px;
-  border-radius: 3px;
-  letter-spacing: 0.02em;
-}
-
-.lang-py {
-  color: #FBBF24;
-  background-color: rgba(251, 191, 36, 0.12);
-}
-
-.lang-java {
-  color: #FB923C;
-  background-color: rgba(251, 146, 60, 0.12);
+.select-lang {
+  padding-left: 30px !important;
+  padding-right: 12px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  max-width: 210px !important;
 }
 
 .editor-tabbar-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .select-compact {
@@ -1077,10 +1068,10 @@ body {
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  height: 26px;
-  padding: 0 8px;
-  font-size: 11.5px;
-  max-width: 140px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13.5px;
+  max-width: 175px;
   outline: none;
   cursor: pointer;
 }
@@ -1094,11 +1085,11 @@ body {
 .autosync-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 8px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.15s ease;
@@ -1113,8 +1104,8 @@ body {
 }
 
 .autosync-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background-color: var(--text-muted);
   transition: background-color 0.15s ease;
@@ -1127,15 +1118,15 @@ body {
 .btn-tab-action {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 9px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
   border-radius: 6px;
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-family: "Inter", sans-serif;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1148,13 +1139,13 @@ body {
 }
 
 .btn-tab-action [data-lucide] {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 .btn-tab-icon {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--border-subtle);
   background-color: var(--bg-surface-subtle);
   color: var(--text-secondary);
@@ -1166,8 +1157,8 @@ body {
 }
 
 .btn-tab-icon [data-lucide] {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 
 /* Reference Banner */
@@ -1175,11 +1166,11 @@ body {
   background-color: rgba(245, 158, 11, 0.08);
   border-bottom: 1px solid rgba(245, 158, 11, 0.25);
   color: #FBBF24;
-  padding: 5px 14px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 13.5px;
 }
 
 .ref-banner-content {
@@ -1194,37 +1185,38 @@ body {
   gap: 6px;
 }
 
-/* Slim 28px Breadcrumb Strip */
+/* 34px File Path & Status Strip */
 .path-bar {
-  height: 28px;
-  min-height: 28px;
+  height: 34px;
+  min-height: 34px;
   background-color: var(--bg-editor);
   border-bottom: 1px solid rgba(39, 39, 42, 0.65);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
-  gap: 8px;
+  gap: 10px;
 }
 
 .path-display {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .breadcrumb-path {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .save-indicator {
-  font-size: 10px;
-  padding: 1px 6px;
+  font-size: 12px;
+  padding: 2px 8px;
   border-radius: 4px;
   background-color: rgba(16, 185, 129, 0.1);
   color: #34D399;
@@ -1239,9 +1231,9 @@ body {
 }
 
 .problem-status-pill {
-  font-size: 10.5px;
+  font-size: 12.5px;
   font-weight: 500;
-  padding: 1px 7px;
+  padding: 2px 9px;
   border-radius: var(--radius-pill);
   display: inline-flex;
   align-items: center;
@@ -1282,7 +1274,7 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: 5px;
   overflow: hidden;
-  height: 20px;
+  height: 24px;
 }
 
 .btn-zoom {
@@ -1290,7 +1282,7 @@ body {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0 5px;
+  padding: 0 6px;
   height: 100%;
   display: inline-flex;
   align-items: center;
@@ -1304,8 +1296,8 @@ body {
 }
 
 .btn-zoom [data-lucide] {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 
 .zoom-level-badge {
@@ -1314,9 +1306,9 @@ body {
   border-left: 1px solid var(--border-subtle);
   border-right: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 0 6px;
+  padding: 0 8px;
   height: 100%;
   cursor: pointer;
   display: inline-flex;
@@ -1349,7 +1341,7 @@ body {
   border: none;
   padding: 14px 16px;
   font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 13.5px;
+  font-size: 16px;
   line-height: 1.6;
   resize: none;
   outline: none;
@@ -1402,10 +1394,10 @@ body {
   display: none !important;
 }
 
-/* 40px Clean Underline Tab Header */
+/* 44px Clean Underline Tab Header */
 .console-header {
-  height: 40px;
-  min-height: 40px;
+  height: 44px;
+  min-height: 44px;
   background-color: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -1426,8 +1418,8 @@ body {
   align-items: center;
   padding: 0 2px;
   font-family: "Inter", sans-serif;
-  font-size: 12.5px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-muted);
   background: transparent;
   border: none;
@@ -1471,21 +1463,21 @@ body {
 
 .runner-empty {
   padding: 28px 16px;
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--text-muted);
 }
 
 .runner-empty code {
   font-family: "JetBrains Mono", monospace;
-  font-size: 11.5px;
+  font-size: 13px;
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
   color: var(--text-secondary);
 }
 
-/* Sharp 44px Footer Action Bar */
+/* 48px Footer Action Bar */
 .console-bottom-bar {
   height: var(--footer-height);
   min-height: var(--footer-height);
@@ -1508,14 +1500,14 @@ body {
 .btn-console-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-family: "Inter", sans-serif;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--text-secondary);
   background: transparent;
   border: none;
-  padding: 4px 6px;
+  padding: 5px 8px;
   border-radius: 6px;
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease;
@@ -1579,7 +1571,7 @@ body {
 }
 
 .switch-label {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -1594,10 +1586,13 @@ body {
   gap: 8px;
 }
 
-.bottom-bar-right .btn-outline-subtle {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
+.bottom-bar-right .btn-outline-subtle,
+.bottom-bar-right .btn-run-samples,
+.bottom-bar-right .btn-judge-all,
+.bottom-bar-right .btn-stop {
+  height: 32px;
+  padding: 0 13px;
+  font-size: 13.5px;
 }
 
 /* =====================================================================
@@ -1700,12 +1695,12 @@ body {
 }
 
 .verdict-banner-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .verdict-banner-subtitle {
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--text-secondary);
 }
 
@@ -1726,7 +1721,7 @@ body {
 }
 
 .lc-verdict-title {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -1739,7 +1734,7 @@ body {
 .lc-verdict-title.verdict-ce { color: var(--verdict-ce); }
 
 .lc-passed-counter {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--text-secondary);
   font-family: "JetBrains Mono", monospace;
 }
@@ -1748,7 +1743,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--text-secondary);
 }
 
@@ -1782,7 +1777,7 @@ body {
 }
 
 .lc-tabs-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1800,9 +1795,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 500;
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
@@ -1953,7 +1948,7 @@ body {
 }
 
 .lc-io-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1982,14 +1977,14 @@ body {
   background-color: var(--bg-app);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 10px 13px;
   font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
   color: #E4E4E7;
   white-space: pre-wrap;
   word-break: break-all;
-  max-height: 160px;
+  max-height: 170px;
   overflow-y: auto;
 }
 
@@ -1997,14 +1992,14 @@ body {
   background-color: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 13px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 12px;
+  font-size: 13.5px;
   color: #F87171;
-  line-height: 1.45;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 180px;
+  max-height: 190px;
   overflow-y: auto;
 }
 
@@ -2017,7 +2012,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -2049,9 +2044,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 7px 11px;
   border-radius: 5px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-family: "JetBrains Mono", monospace;
   cursor: pointer;
 }
@@ -2063,7 +2058,7 @@ body {
 
 .test-timing,
 .test-memory {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -2072,12 +2067,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 6px;
   border: 1px solid transparent;
-  min-width: 32px;
+  min-width: 34px;
 }
 
 .verdict-empty { background-color: var(--bg-surface-subtle); border-color: var(--border-subtle); color: var(--text-secondary); }
@@ -2118,7 +2113,7 @@ body {
 }
 
 .section-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -2134,7 +2129,7 @@ body {
   color: var(--text-primary);
   padding: 10px 12px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 12.5px;
+  font-size: 14px;
   resize: vertical;
   outline: none;
 }

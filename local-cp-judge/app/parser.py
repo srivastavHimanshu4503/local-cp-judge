@@ -397,11 +397,17 @@ def parse_single_problem(problem_dir: Path, templates_dir: Path) -> ProblemMeta:
         cleaned = re.sub(r'^[A-Za-z0-9]+[-_.]\s*', '', problem_id)
         name = cleaned.replace('-', ' ').replace('_', ' ').strip().title() or problem_id
 
-    # 3. Check for problem statement (PDF, HTML)
+    # 3. Check for problem statement (PDF, HTML) — prefer HTML/Markdown dark rendering by default
     has_pdf = (problem_dir / "problem.pdf").exists() or (problem_dir / "statement" / "problem.pdf").exists()
-    has_html = (problem_dir / "statement.html").exists() or (problem_dir / "problem.html").exists() or (problem_dir / "statement" / "problem.html").exists()
+    has_html = (
+        (problem_dir / "statement.html").exists()
+        or (problem_dir / "problem.html").exists()
+        or (problem_dir / "statement" / "problem.html").exists()
+        or (problem_dir / "problem.md").exists()
+        or (problem_dir / "statement" / "problem.md").exists()
+    )
     has_statement = has_pdf or has_html
-    statement_type = "pdf" if has_pdf else ("html" if has_html else "none")
+    statement_type = "html" if has_html else ("pdf" if has_pdf else "none")
 
     # 4. Count test cases
     sample_tests = get_problem_test_cases(problem_dir, suite="sample")
@@ -658,8 +664,12 @@ def _meta_needs_refresh(contest_dir: Path, meta: ContestMeta) -> bool:
             (prob_dir / "statement.html").exists()
             or (prob_dir / "problem.html").exists()
             or (prob_dir / "statement" / "problem.html").exists()
+            or (prob_dir / "problem.md").exists()
+            or (prob_dir / "statement" / "problem.md").exists()
         )
         if (has_pdf or has_html) and not p.has_statement:
+            return True
+        if has_pdf != p.has_pdf or (has_html and p.statement_type == "pdf"):
             return True
     return False
 

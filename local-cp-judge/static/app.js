@@ -40,6 +40,7 @@ const state = {
   contestMeta: null,
   activeProblemId: null,
   activeProblem: null,
+  statementFormat: "auto", // "auto" (Dark Markdown/HTML) or "pdf"
   activeLang: "python", // Python is default
   activeRefPath: null,
   isReferenceMode: false,
@@ -52,7 +53,7 @@ const state = {
   activeTestcase: null,
   customTests: [],
   problemStatuses: {},
-  editorFontSize: parseFloat(localStorage.getItem("obsidian_editor_font_size")) || 14,
+  editorFontSize: parseFloat(localStorage.getItem("obsidian_editor_font_size_v2")) || 16,
   isWordWrap: localStorage.getItem("local_cp_word_wrap") === "true",
   isMonacoReady: false,
   testResults: [],
@@ -114,6 +115,7 @@ const elements = {
   leftViewSubmissions: document.getElementById("left-view-submissions"),
   pdfViewer: document.getElementById("pdf-viewer"),
   pdfFallback: document.getElementById("pdf-fallback"),
+  btnTogglePdf: document.getElementById("btn-toggle-pdf"),
   btnOpenPdfExt: document.getElementById("btn-open-pdf-ext"),
   resizerCols: document.getElementById("resizer-cols"),
 
@@ -169,7 +171,7 @@ const elements = {
   // Right Column (Workspace)
   workspaceRight: document.getElementById("workspace-right"),
   paneEditor: document.getElementById("pane-editor"),
-  langTabs: document.getElementById("lang-tabs"),
+  langSelect: document.getElementById("lang-select"),
   refSubmissionSelect: document.getElementById("ref-submission-select"),
   chkAutoSync: document.getElementById("chk-auto-sync"),
   refBanner: document.getElementById("ref-banner"),
@@ -373,8 +375,8 @@ function getVerdictClass(verdict) {
 // Workspace Zoom Controller & Font Sizing
 // =====================================================================
 
-const BASE_FONT_SIZE = 14;
-const MIN_FONT_SIZE = 9;
+const BASE_FONT_SIZE = 16;
+const MIN_FONT_SIZE = 10;
 const MAX_FONT_SIZE = 36;
 
 function updateZoomUI(fontSize) {
@@ -382,7 +384,7 @@ function updateZoomUI(fontSize) {
     const pct = Math.round((fontSize / BASE_FONT_SIZE) * 100);
     elements.zoomLevelText.textContent = `${pct}%`;
   }
-  localStorage.setItem("obsidian_editor_font_size", fontSize);
+  localStorage.setItem("obsidian_editor_font_size_v2", fontSize);
 
   if (elements.editorFallback) {
     elements.editorFallback.style.fontSize = `${fontSize}px`;
@@ -390,7 +392,7 @@ function updateZoomUI(fontSize) {
   if (state.monacoDiffEditor) {
     try {
       state.monacoDiffEditor.updateOptions({
-        fontSize: Math.max(9, fontSize - 1.5),
+        fontSize: Math.max(10, fontSize - 1.5),
       });
     } catch (e) {}
   }
@@ -415,6 +417,47 @@ function zoomOut() {
 
 function zoomReset() {
   setEditorFontSize(BASE_FONT_SIZE);
+}
+
+function getActiveStatementUrl(
+  contestId = state.activeContestId,
+  problemId = state.activeProblemId
+) {
+  if (!contestId || !problemId) return "about:blank";
+  const base = `/api/problems/${contestId}/${problemId}/statement`;
+  return state.statementFormat === "pdf" ? `${base}?format=pdf` : base;
+}
+
+function updateStatementViewer() {
+  const problem = state.activeProblem;
+  if (!problem || (!problem.has_statement && !problem.has_pdf)) {
+    if (elements.btnTogglePdf) {
+      elements.btnTogglePdf.style.display = "none";
+    }
+    elements.pdfViewer.src = "about:blank";
+    elements.pdfViewer.style.display = "none";
+    elements.pdfFallback.style.display = "flex";
+    return;
+  }
+
+  const hasAlternatePdf = Boolean(problem.has_pdf && problem.statement_type !== "pdf");
+  if (!hasAlternatePdf && state.statementFormat === "pdf") {
+    state.statementFormat = "auto";
+  }
+
+  if (elements.btnTogglePdf) {
+    elements.btnTogglePdf.style.display = hasAlternatePdf ? "inline-flex" : "none";
+    const isPdfMode = state.statementFormat === "pdf";
+    elements.btnTogglePdf.classList.toggle("active", isPdfMode);
+    elements.btnTogglePdf.textContent = isPdfMode ? "Dark Markdown" : "View PDF";
+    elements.btnTogglePdf.title = isPdfMode
+      ? "Switch back to unified Dark Markdown statement"
+      : "View original contest PDF";
+  }
+
+  elements.pdfViewer.src = getActiveStatementUrl();
+  elements.pdfViewer.style.display = "block";
+  elements.pdfFallback.style.display = "none";
 }
 
 // =====================================================================
@@ -490,8 +533,8 @@ function initMonacoEditor() {
         theme: "obsidian-dark",
         automaticLayout: true,
         fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
-        fontSize: state.editorFontSize || 14,
-        lineHeight: 22,
+        fontSize: state.editorFontSize || BASE_FONT_SIZE,
+        lineHeight: 24,
         mouseWheelZoom: true,
         wordWrap: state.isWordWrap ? "on" : "off",
         lineNumbersMinChars: 3,
@@ -524,7 +567,7 @@ function initMonacoEditor() {
           theme: "obsidian-dark",
           automaticLayout: true,
           fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
-          fontSize: Math.max(9, (state.editorFontSize || 14) - 1.5),
+          fontSize: Math.max(10, (state.editorFontSize || BASE_FONT_SIZE) - 1.5),
           readOnly: true,
           renderSideBySide: true,
           wordWrap: state.isWordWrap ? "on" : "off",
@@ -555,7 +598,7 @@ function initMonacoEditor() {
       state.isMonacoReady = true;
       elements.editorFallback.style.display = "none";
       elements.editorContainer.style.display = "block";
-      updateZoomUI(state.editorFontSize || 14);
+      updateZoomUI(state.editorFontSize || BASE_FONT_SIZE);
       applyWordWrap(state.isWordWrap);
 
       // Load initial code if already fetched
@@ -578,6 +621,7 @@ function initMonacoEditor() {
 function enableFallbackEditor() {
   elements.editorContainer.style.display = "none";
   elements.editorFallback.style.display = "block";
+  updateZoomUI(state.editorFontSize || BASE_FONT_SIZE);
 
   elements.editorFallback.addEventListener("input", () => {
     if (!state.isReferenceMode) {
@@ -1433,16 +1477,9 @@ async function selectProblem(problemId) {
   renderProblemTabs(state.contestMeta.problems);
   updateProblemStatusPill();
 
-  // Render Statement (PDF or HTML)
-  if (problem.has_statement || problem.has_pdf) {
-    elements.pdfViewer.src = `/api/problems/${state.activeContestId}/${problemId}/statement`;
-    elements.pdfViewer.style.display = "block";
-    elements.pdfFallback.style.display = "none";
-  } else {
-    elements.pdfViewer.src = "about:blank";
-    elements.pdfViewer.style.display = "none";
-    elements.pdfFallback.style.display = "flex";
-  }
+  // Render Statement (Unified Dark Markdown by default, optional PDF toggle)
+  state.statementFormat = "auto";
+  updateStatementViewer();
 
   // Populate reference submissions selector
   populateReferenceSelector(problem.reference_submissions);
@@ -1564,10 +1601,8 @@ async function loadActiveCode(force = false) {
     const data = await res.json();
 
     setEditorCode(data.code, data.lang);
-    if (elements.langTabs) {
-      elements.langTabs.querySelectorAll(".lang-tab").forEach((t) => {
-        t.classList.toggle("active", t.dataset.lang === data.lang);
-      });
+    if (elements.langSelect) {
+      elements.langSelect.value = data.lang;
     }
     state.lastModified = data.last_modified;
     state.isReferenceMode = data.is_reference;
@@ -2440,9 +2475,18 @@ function initEventListeners() {
   // Open Statement external
   elements.btnOpenPdfExt.addEventListener("click", () => {
     if (state.activeContestId && state.activeProblemId) {
-      window.open(`/api/problems/${state.activeContestId}/${state.activeProblemId}/statement`, "_blank");
+      window.open(getActiveStatementUrl(), "_blank");
     }
   });
+
+  // Toggle Dark Markdown vs Original PDF statement
+  if (elements.btnTogglePdf) {
+    elements.btnTogglePdf.addEventListener("click", () => {
+      if (!state.activeProblem || !state.activeProblem.has_pdf) return;
+      state.statementFormat = state.statementFormat === "pdf" ? "auto" : "pdf";
+      updateStatementViewer();
+    });
+  }
 
   // Drag and drop code file onto editor pane
   const editorDropzone = document.getElementById("editor-dropzone");
@@ -2476,9 +2520,9 @@ function initEventListeners() {
       reader.onload = async (evt) => {
         const code = evt.target.result;
         if (lang !== state.activeLang) {
-          elements.langTabs.querySelectorAll(".lang-tab").forEach((t) => {
-            t.classList.toggle("active", t.dataset.lang === lang);
-          });
+          if (elements.langSelect) {
+            elements.langSelect.value = lang;
+          }
           state.activeLang = lang;
         }
         setEditorCode(code, lang);
@@ -2543,17 +2587,15 @@ function initEventListeners() {
     }
   });
 
-  // Language Tabs
-  elements.langTabs.querySelectorAll(".lang-tab").forEach((tab) => {
-    tab.addEventListener("click", async () => {
-      elements.langTabs.querySelectorAll(".lang-tab").forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      state.activeLang = tab.dataset.lang;
+  // Programming Language Dropdown
+  if (elements.langSelect) {
+    elements.langSelect.addEventListener("change", async (e) => {
+      state.activeLang = e.target.value;
       state.activeRefPath = null;
       elements.refSubmissionSelect.value = "";
       await loadActiveCode(true);
     });
-  });
+  }
 
   // Reference Submissions Select
   elements.refSubmissionSelect.addEventListener("change", async (e) => {
@@ -2734,9 +2776,9 @@ function initEventListeners() {
       const entry = state.activeSubmissionEntry;
       if (!entry || !entry.code) return;
       if (entry.lang && entry.lang !== state.activeLang) {
-        elements.langTabs.querySelectorAll(".lang-tab").forEach((t) => {
-          t.classList.toggle("active", t.dataset.lang === entry.lang);
-        });
+        if (elements.langSelect) {
+          elements.langSelect.value = entry.lang;
+        }
         state.activeLang = entry.lang;
       }
       state.activeRefPath = null;
