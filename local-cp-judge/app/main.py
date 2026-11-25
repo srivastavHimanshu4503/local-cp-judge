@@ -932,7 +932,7 @@ def _generate_stress_input(
                     fuzzed = [str(random.randint(max(1, int(p) // 2), int(p) * 2 + 5)) for p in parts]
                     return " ".join(fuzzed) + "\n"
 
-            # Pattern B: Line 1 is N, Line 2 is N space-separated tokens
+            # Pattern B1: Line 1 is N, Line 2 is N space-separated tokens
             if len(lines) == 2 and lines[0].isdigit():
                 toks = lines[1].split()
                 orig_n = int(lines[0])
@@ -945,6 +945,44 @@ def _generate_stress_input(
                     else:
                         new_toks = random.choices(toks, k=new_n)
                     return f"{new_n}\n" + " ".join(new_toks) + "\n"
+
+            # Pattern B2: Line 1 is "N K" (or "N"), Line 2 is a single string of length N (e.g. Medical Certificates)
+            hdr_parts = lines[0].split()
+            if len(lines) == 2 and hdr_parts and hdr_parts[0].isdigit() and " " not in lines[1]:
+                orig_n = int(hdr_parts[0])
+                if len(lines[1]) == orig_n:
+                    alphabet = sorted(set(lines[1])) or ["A", "P"]
+                    new_n = random.randint(max(2, orig_n // 2), max(4, min(30, orig_n * 2)))
+                    new_str = "".join(random.choices(alphabet, k=new_n))
+                    if len(hdr_parts) == 2 and hdr_parts[1].isdigit():
+                        new_k = random.randint(0, min(new_n, max(1, int(hdr_parts[1]) * 2)))
+                        return f"{new_n} {new_k}\n{new_str}\n"
+                    return f"{new_n}\n{new_str}\n"
+
+            # Pattern B3: Line 1 is "N M", Line 2 has N items, Line 3 has M items (e.g. Exam Halls)
+            if len(lines) == 3 and len(hdr_parts) == 2 and hdr_parts[0].isdigit() and hdr_parts[1].isdigit():
+                n0, m0 = int(hdr_parts[0]), int(hdr_parts[1])
+                t1, t2 = lines[1].split(), lines[2].split()
+                if len(t1) == n0 and len(t2) == m0:
+                    def _fuzz_arr(arr: list[str], new_len: int) -> list[str]:
+                        if all(x.isdigit() or (x.startswith("-") and x[1:].isdigit()) for x in arr):
+                            iv = [int(x) for x in arr]
+                            lo, hi = min(iv), max(iv)
+                            return [str(random.randint(lo, max(lo + 1, hi))) for _ in range(new_len)]
+                        return random.choices(arr, k=new_len)
+
+                    new_n = random.randint(1, max(3, min(15, n0 * 2)))
+                    new_m = random.randint(1, max(3, min(15, m0 * 2)))
+                    return f"{new_n} {new_m}\n" + " ".join(_fuzz_arr(t1, new_n)) + "\n" + " ".join(_fuzz_arr(t2, new_m)) + "\n"
+
+            # Pattern B4: Line 1 is N followed by N grid strings of length N (e.g. Damaged Board Queens)
+            if len(lines) >= 3 and lines[0].isdigit():
+                n0 = int(lines[0])
+                if len(lines) - 1 == n0 and all(" " not in row and len(row) == n0 for row in lines[1:]):
+                    grid_chars = list(set("".join(lines[1:]))) or [".", "#"]
+                    new_n = random.randint(4, min(9, max(4, n0 + 2)))
+                    rows = ["".join(random.choices(grid_chars, k=new_n)) for _ in range(new_n)]
+                    return f"{new_n}\n" + "\n".join(rows) + "\n"
 
             # Pattern C: Two strings on separate lines (e.g. anagram check, subsequence)
             if len(lines) == 2 and all(not l.isdigit() for l in lines):
@@ -959,21 +997,33 @@ def _generate_stress_input(
                     s2 = "".join(random.choices(chars[:6], k=random.randint(4, 12)))
                 return f"{s1}\n{s2}\n"
 
-            # Pattern D: General structure preservation
-            # Keep line count and token count per line IDENTICAL to chosen valid testcase
-            fuzzed_lines = []
-            for line in lines:
+            # Pattern D: Structure-preserving perturbation (keeps header line 0 fixed so counts/dims remain valid)
+            data_ints = [
+                int(tok)
+                for line in lines[1:]
+                for tok in line.split()
+                if tok.isdigit() or (tok.startswith("-") and tok[1:].isdigit())
+            ]
+            hdr_n = int(hdr_parts[0]) if hdr_parts and hdr_parts[0].isdigit() else None
+            is_vertex_indexed = bool(
+                hdr_n is not None and data_ints and min(data_ints) >= 1 and max(data_ints) <= hdr_n and len(lines) > 2
+            )
+
+            fuzzed_lines = [lines[0]]
+            for line in lines[1:]:
                 parts = line.split()
                 fuzzed_parts = []
                 for p in parts:
-                    if p.isdigit():
+                    if p.isdigit() or (p.startswith("-") and p[1:].isdigit()):
                         val = int(p)
-                        val_min = max(0, val - random.randint(0, 5))
-                        val_max = val + random.randint(0, 10)
-                        fuzzed_parts.append(str(random.randint(val_min, max(val_min + 1, val_max))))
-                    elif p.startswith("-") and p[1:].isdigit():
-                        val = int(p)
-                        fuzzed_parts.append(str(val + random.randint(-5, 5)))
+                        if is_vertex_indexed:
+                            fuzzed_parts.append(str(random.randint(1, max(1, hdr_n))))
+                        else:
+                            lo = min(data_ints) if data_ints else val
+                            hi = max(data_ints) if data_ints else val + 5
+                            if val >= 1:
+                                lo = max(1, lo)
+                            fuzzed_parts.append(str(random.randint(lo, max(lo + 1, hi))))
                     elif p.isalpha():
                         chars = list(set(p.lower())) or list("abcde")
                         fuzzed_parts.append("".join(random.choices(chars, k=len(p))))
@@ -1085,29 +1135,32 @@ async def run_stress_test(
             if w_cand.exists() and w_cand.is_file():
                 ref_candidates.append(w_cand)
 
-        # Collect all viable reference files under submissions
-        sub_files: list[tuple[bool, int, Path]] = []
-        if sub_dir.exists():
-            for f in sub_dir.rglob("*"):
-                if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in EXTENSION_TO_LANG:
-                    is_accepted = "accepted" in [p.lower() for p in f.parts]
-                    f_ext = f.suffix.lower()
-                    f_lang = EXTENSION_TO_LANG.get(f_ext, "")
-                    # Prioritize matching user language, then Python, then C++, then Java
-                    lang_score = 0
-                    if f_lang == user_lang:
-                        lang_score = 4
-                    elif f_lang == "python":
-                        lang_score = 3
-                    elif f_lang == "cpp":
-                        lang_score = 2
-                    elif f_lang == "java":
-                        lang_score = 1
-                    sub_files.append((is_accepted, lang_score, f))
+        # Collect all viable reference files under submissions/ (or solutions/ fallback)
+        sub_files: list[tuple[bool, int, int, Path]] = []
+        for ref_root in (sub_dir, prob_dir / "solutions"):
+            if ref_root.exists():
+                for f in ref_root.rglob("*"):
+                    if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in EXTENSION_TO_LANG:
+                        is_accepted = "accepted" in [p.lower() for p in f.parts]
+                        f_ext = f.suffix.lower()
+                        f_lang = EXTENSION_TO_LANG.get(f_ext, "")
+                        # Prioritize matching user language, then Python, then C++, then Java
+                        lang_score = 0
+                        if f_lang == user_lang:
+                            lang_score = 4
+                        elif f_lang == "python":
+                            lang_score = 3
+                        elif f_lang == "cpp":
+                            lang_score = 2
+                        elif f_lang == "java":
+                            lang_score = 1
+                        # Prefer canonical ref.py / solution.py first
+                        canonical_score = 1 if f.name.lower() in ("ref.py", "solution.py", "ref.cpp", "ref.java") else 0
+                        sub_files.append((is_accepted, lang_score, canonical_score, f))
 
-        # Sort: accepted first, then highest lang score
-        sub_files.sort(key=lambda x: (1 if x[0] else 0, x[1]), reverse=True)
-        for _, _, f in sub_files:
+        # Sort: accepted first, then highest lang score, then canonical filename
+        sub_files.sort(key=lambda x: (1 if x[0] else 0, x[1], x[2]), reverse=True)
+        for _, _, _, f in sub_files:
             ref_candidates.append(f)
 
     if not ref_candidates:
@@ -1207,6 +1260,13 @@ async def run_stress_test(
                 diff_message=diff_msg,
                 message=f"Discrepancy found on iteration #{valid_tested}!",
             )
+
+    if valid_tested == 0:
+        return StressTestResult(
+            status="error",
+            iteration=0,
+            message=f"Reference solution ({ref_path.name}) failed on generated inputs. Add a custom workspace/gen.py generator for this problem.",
+        )
 
     return StressTestResult(
         status="passed",

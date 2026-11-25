@@ -1813,12 +1813,22 @@ body {
 
 .custom-input-section,
 .custom-output-section,
-.custom-saved-section,
-#view-stress {
+.custom-saved-section {
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+#view-stress {
+  padding: 14px 16px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stress-control-card,
+.stress-results-box {
+  flex-shrink: 0;
 }
 
 .custom-output-section,

@@ -1170,8 +1170,9 @@ async function startJudging(suite) {
 
   // Switch to Test Verdicts view
   elements.viewTabs.forEach((t) => t.classList.toggle("active", t.dataset.view === "verdicts"));
-  elements.viewVerdicts.classList.add("active");
-  elements.viewCustom.classList.remove("active");
+  if (elements.viewVerdicts) elements.viewVerdicts.classList.add("active");
+  if (elements.viewCustom) elements.viewCustom.classList.remove("active");
+  if (elements.viewStress) elements.viewStress.classList.remove("active");
 
   // Auto-save code first if in workspace mode
   if (!state.isReferenceMode && state.isDirty) {
