@@ -390,11 +390,11 @@ body {
   background: #09090B !important;
   color: #D4D4D8 !important;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  font-size: 16.5px !important;
-  line-height: 1.72 !important;
+  font-size: 18px !important;
+  line-height: 1.75 !important;
   max-width: 100% !important;
   margin: 0 !important;
-  padding: 24px 28px 40px !important;
+  padding: 24px 28px 44px !important;
   -webkit-font-smoothing: antialiased;
 }
 main, .statement-container {
@@ -409,7 +409,7 @@ header, header#title-block-header {
   border-bottom: 1px solid #27272A !important;
 }
 h1, h1.title, .title-row h1 {
-  font-size: 25px !important;
+  font-size: 28px !important;
   line-height: 1.25 !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em !important;
@@ -418,7 +418,7 @@ h1, h1.title, .title-row h1 {
 }
 .letter {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 700 !important;
   color: #10B981 !important;
   margin: 0 0 6px 0 !important;
@@ -429,61 +429,95 @@ h1 .letter {
   margin-right: 0.35em !important;
 }
 h2, .section-title {
-  font-size: 19px !important;
+  font-size: 21px !important;
   line-height: 1.35 !important;
   font-weight: 600 !important;
   color: #FAFAFA !important;
-  margin: 24px 0 10px 0 !important;
+  margin: 26px 0 12px 0 !important;
   padding-bottom: 6px !important;
   border-bottom: 1px solid #27272A !important;
 }
 h3 {
-  font-size: 17px !important;
+  font-size: 19px !important;
   font-weight: 600 !important;
   color: #F4F4F5 !important;
-  margin: 18px 0 8px 0 !important;
+  margin: 18px 0 10px 0 !important;
 }
 p, li {
-  font-size: 16.5px !important;
-  line-height: 1.72 !important;
+  font-size: 18px !important;
+  line-height: 1.75 !important;
   color: #D4D4D8 !important;
   max-width: none !important;
 }
-p { margin: 0 0 12px 0 !important; }
-ul, ol { padding-left: 1.45em !important; margin: 8px 0 14px 0 !important; }
-li { margin: 4px 0 !important; }
+p { margin: 0 0 13px 0 !important; }
+ul, ol { padding-left: 1.45em !important; margin: 8px 0 16px 0 !important; }
+li { margin: 6px 0 !important; }
 strong, b { color: #FAFAFA !important; font-weight: 600 !important; }
-em, .subtitle, .meta, h1 + p em {
+em {
+  font-size: inherit !important;
+  color: #F4F4F5 !important;
+  font-style: italic;
+}
+.subtitle, .meta, h1 + p em {
   color: #A1A1AA !important;
-  font-size: 14.5px !important;
+  font-size: 15.5px !important;
+  font-style: normal !important;
 }
 .explain, .example-explanation {
-  font-size: 15.5px !important;
-  line-height: 1.68 !important;
-  color: #D4D4D8 !important;
+  font-size: 17px !important;
+  line-height: 1.72 !important;
+  color: #E4E4E7 !important;
+  background: #111115 !important;
+  border: 1px solid #27272A !important;
+  padding: 12px 14px !important;
+  border-radius: 8px !important;
+}
+.dp-analysis-card {
+  background: #111115 !important;
+  border: 1px solid #3F3F46 !important;
+  border-left: 3px solid #10B981 !important;
+  border-radius: 10px !important;
+  padding: 18px 20px !important;
+  margin-top: 26px !important;
+  color: #E4E4E7 !important;
+}
+.dp-analysis-card h3 {
+  font-size: 20px !important;
+  color: #34D399 !important;
+  margin: 0 0 12px 0 !important;
+}
+.dp-analysis-card p, .dp-analysis-card li {
+  font-size: 18px !important;
+  line-height: 1.75 !important;
+  color: #E4E4E7 !important;
+}
+.dp-analysis-card pre {
+  background: #09090B !important;
+  border: 1px solid #27272A !important;
+  border-left: 3px solid #10B981 !important;
 }
 .sample h3, .example h3 {
-  font-size: 14.5px !important;
-  color: #A1A1AA !important;
-  margin: 0 0 6px 0 !important;
+  font-size: 15px !important;
+  color: #D4D4D8 !important;
+  margin: 0 0 8px 0 !important;
 }
 hr, .page-break {
   border-color: #27272A !important;
 }
-a, a:visited, .source-link { color: #60A5FA !important; font-size: 14px !important; }
+a, a:visited, .source-link { color: #60A5FA !important; font-size: 15px !important; }
 .meta-chip {
-  font-size: 13px !important;
-  padding: 4px 11px !important;
+  font-size: 14px !important;
+  padding: 5px 12px !important;
   background: #18181B !important;
   border: 1px solid #27272A !important;
-  color: #D4D4D8 !important;
+  color: #E4E4E7 !important;
 }
 code {
   background: #18181B !important;
   border: 1px solid #27272A !important;
   color: #FAFAFA !important;
   font-family: "JetBrains Mono", Consolas, monospace !important;
-  font-size: 0.9em !important;
+  font-size: 0.92em !important;
   padding: 2px 6px !important;
   border-radius: 5px !important;
 }
@@ -493,36 +527,53 @@ pre, div.sourceCode, .io-card, .insight-box {
   border-radius: 10px !important;
   color: #FAFAFA !important;
 }
-pre {
+pre, .io-card pre {
   border-left: 3px solid #3F3F46 !important;
-  padding: 12px 16px !important;
+  padding: 13px 16px !important;
   margin: 10px 0 16px 0 !important;
   font-family: "JetBrains Mono", Consolas, monospace !important;
-  font-size: 14.5px !important;
-  line-height: 1.58 !important;
+  font-size: 16px !important;
+  line-height: 1.62 !important;
+  color: #FAFAFA !important;
   overflow-x: auto !important;
+}
+.io-card pre {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 2px 0 !important;
+  margin: 0 !important;
 }
 pre code {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  font-size: 14.5px !important;
+  font-size: 16px !important;
 }
-.io-card .io-header {
+.io-card .io-header, .io-card-header {
   background: #18181B !important;
   border-bottom: 1px solid #27272A !important;
-  font-size: 13.5px !important;
+  font-size: 15px !important;
   color: #E4E4E7 !important;
 }
+.io-card-title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #FAFAFA !important;
+}
+.btn-copy-sample {
+  font-size: 13.5px !important;
+  color: #A1A1AA !important;
+}
 .io-card .io-body {
-  font-size: 14.5px !important;
+  font-size: 16px !important;
   color: #FAFAFA !important;
 }
 table {
   border-collapse: collapse !important;
   width: 100% !important;
-  margin: 12px 0 18px 0 !important;
-  font-size: 15px !important;
+  margin: 14px 0 20px 0 !important;
+  font-size: 16.5px !important;
   display: table !important;
 }
 tbody { border-color: #27272A !important; }

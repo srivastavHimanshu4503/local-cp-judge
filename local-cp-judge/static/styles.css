@@ -926,11 +926,11 @@ body {
 }
 
 .sub-section-title {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .sub-history-list {
@@ -980,7 +980,7 @@ body {
 }
 
 .sub-hist-kind {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -989,12 +989,12 @@ body {
 
 .sub-hist-lang {
   font-family: "JetBrains Mono", monospace;
-  font-size: 12px;
+  font-size: 13px;
   padding: 2px 7px;
   border-radius: 4px;
   background-color: var(--bg-app);
   border: 1px solid var(--border-subtle);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .sub-hist-right {
@@ -1002,8 +1002,8 @@ body {
   align-items: center;
   gap: 10px;
   font-family: "JetBrains Mono", monospace;
-  font-size: 12.5px;
-  color: var(--text-muted);
+  font-size: 13px;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -1021,8 +1021,8 @@ body {
   border-radius: 8px;
   padding: 12px 14px;
   font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.65;
   color: #E4E4E7;
   white-space: pre-wrap;
   word-break: break-word;
