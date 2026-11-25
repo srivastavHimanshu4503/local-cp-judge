@@ -154,18 +154,21 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  gap: 12px;
+  padding: 0 14px;
+  gap: 10px;
   user-select: none;
+  flex-wrap: nowrap;
+  overflow: hidden;
   z-index: 20;
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
+  overflow: hidden;
 }
 
 .brand {
@@ -193,8 +196,10 @@ body {
 .contest-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .select-pill {
@@ -202,12 +207,13 @@ body {
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
-  padding: 0 11px;
+  padding: 0 10px;
   font-family: "Inter", sans-serif;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   height: 34px;
   max-width: 195px;
+  text-overflow: ellipsis;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -223,7 +229,9 @@ body {
 }
 
 .select-contest-pill {
-  max-width: 220px;
+  flex: 0 1 185px;
+  min-width: 110px;
+  max-width: 185px;
 }
 
 .problem-nav-group {
@@ -231,13 +239,16 @@ body {
   align-items: center;
   gap: 4px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .problem-select-wrap {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-width: 0;
+  min-width: 90px;
+  flex: 1 1 auto;
+  max-width: 210px;
 }
 
 .problem-select-wrap .active-dot {
@@ -247,7 +258,8 @@ body {
 }
 
 .select-problem-pill {
-  max-width: 225px;
+  width: 100%;
+  max-width: 210px;
   padding-left: 24px;
 }
 
@@ -385,19 +397,23 @@ body {
   background-color: rgba(239, 68, 68, 0.26);
 }
 
-/* Topbar Right: Timer + Practice + Upload */
+/* Topbar Right: Timer + Upload + Toolchains */
 .topbar-right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .contest-timer {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: 4px;
   padding: 2px 6px;
   height: 34px;
   background-color: var(--bg-app);
@@ -417,12 +433,24 @@ body {
 .timer-segment {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 2px 5px;
+  height: 26px;
+  line-height: 1;
   border-radius: 6px;
   border: none;
   background: transparent;
   color: inherit;
+}
+
+.timer-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .timer-segment-contest {
@@ -439,7 +467,9 @@ body {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
   color: var(--text-muted);
 }
 
@@ -461,10 +491,12 @@ body {
 }
 
 .timer-display {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   color: var(--text-secondary);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 
 .timer-display-q {
@@ -2814,20 +2846,38 @@ body {
    Responsive Rules (< 1024px) — Zero Horizontal Overflow
    ===================================================================== */
 
-@media (max-width: 1360px) {
-  .select-contest-pill,
-  .select-problem-pill {
-    max-width: 175px;
-  }
-}
-
-@media (max-width: 1240px) {
+@media (max-width: 1420px) {
   .brand-title {
     display: none;
   }
 
   .timer-segment-contest .timer-tag {
     display: none;
+  }
+
+  .select-contest-pill {
+    max-width: 160px;
+  }
+
+  .problem-select-wrap,
+  .select-problem-pill {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .btn-next-problem span,
+  .pill-upload span {
+    display: none;
+  }
+
+  .select-contest-pill {
+    max-width: 135px;
+  }
+
+  .problem-select-wrap,
+  .select-problem-pill {
+    max-width: 150px;
   }
 }
 

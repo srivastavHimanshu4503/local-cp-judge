@@ -74,12 +74,13 @@
     <!-- Right: Contest + Question Dual Timer + Upload + Toolchains -->
     <div class="topbar-right">
       <div class="contest-timer dual-timer-pill" id="contest-timer">
-        <button type="button" id="btn-timer-breakdown" class="timer-segment timer-segment-contest" title="Total Contest Time (Click for per-question breakdown &amp; contest reset)">
+        <button type="button" id="btn-timer-breakdown" class="timer-segment timer-segment-contest" title="Total Contest Time (Click for per-question breakdown &amp; resets)">
+          <i data-lucide="clock" class="timer-icon"></i>
           <span class="timer-tag">Contest</span>
           <span id="timer-display" class="timer-display">00:00:00</span>
         </button>
         <span class="timer-divider" aria-hidden="true"></span>
-        <div id="question-timer-segment" class="timer-segment timer-segment-question" title="Active Question Time (Freezes when solved)">
+        <div id="question-timer-segment" class="timer-segment timer-segment-question" title="Active Question Time (Freezes when Solved)">
           <span id="question-timer-label" class="timer-tag timer-q-tag">Q·A</span>
           <span id="question-timer-display" class="timer-display timer-display-q">00:00</span>
         </div>
@@ -88,9 +89,6 @@
         </button>
         <button type="button" id="btn-timer-reset" class="btn-timer-act" title="Reset Current Question Timer">
           <i data-lucide="rotate-ccw"></i>
-        </button>
-        <button type="button" id="btn-timer-details" class="btn-timer-act" title="View Contest &amp; Question Time Breakdown">
-          <i data-lucide="bar-chart-2"></i>
         </button>
       </div>
 

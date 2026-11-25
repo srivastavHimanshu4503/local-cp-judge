@@ -107,7 +107,6 @@ const elements = {
   // Contest & Question Timers
   contestTimer: document.getElementById("contest-timer"),
   btnTimerBreakdown: document.getElementById("btn-timer-breakdown"),
-  btnTimerDetails: document.getElementById("btn-timer-details"),
   timerDisplay: document.getElementById("timer-display"),
   questionTimerSegment: document.getElementById("question-timer-segment"),
   questionTimerLabel: document.getElementById("question-timer-label"),
@@ -1357,20 +1356,20 @@ function syncContestSolvedFromStatuses() {
   let allSolved = state.contestMeta.problems.length > 0;
   state.contestMeta.problems.forEach((p) => {
     const pTimer = ensureProblemTimer(state.activeContestId, p.problem_id);
-    const st = state.problemStatuses[p.problem_id];
-    if (st && st.verdict === "AC" && !pTimer.solved) {
-      pTimer.solved = true;
-      pTimer.solvedAtSec = pTimer.elapsedSec;
+    // Clean up any prior fabricated solved state that had no recorded contest split
+    if (pTimer.solved && (pTimer.contestAtSolveSec === null || pTimer.contestAtSolveSec === undefined)) {
+      pTimer.solved = false;
+      pTimer.solvedAtSec = null;
     }
     if (!pTimer.solved) {
       allSolved = false;
     }
   });
-  if (allSolved && !cTimer.completed) {
-    cTimer.completed = true;
-    if (cTimer.completedAtSec === null) {
-      cTimer.completedAtSec = cTimer.contestElapsedSec;
-    }
+  cTimer.completed = allSolved;
+  if (!allSolved) {
+    cTimer.completedAtSec = null;
+  } else if (cTimer.completedAtSec === null) {
+    cTimer.completedAtSec = cTimer.contestElapsedSec;
   }
   saveTimersMap();
 }
@@ -1392,15 +1391,16 @@ function markProblemSolvedInTimer(contestId, problemId) {
   if (contestMeta && Array.isArray(contestMeta.problems) && contestMeta.problems.length > 0) {
     const everySolved = contestMeta.problems.every((p) => {
       const pt = ensureProblemTimer(contestId, p.problem_id);
-      const st = (contestId === state.activeContestId) ? state.problemStatuses[p.problem_id] : null;
-      return Boolean(pt.solved || (st && st.verdict === "AC"));
+      return Boolean(pt && pt.solved);
     });
+    cTimer.completed = everySolved;
     if (everySolved) {
-      cTimer.completed = true;
       cTimer.completedAtSec = cTimer.contestElapsedSec;
       if (state.timer.isRunning && contestId === state.activeContestId) {
         pauseTimer();
       }
+    } else {
+      cTimer.completedAtSec = null;
     }
   }
 
@@ -1440,9 +1440,6 @@ function initTimer() {
   }
   if (elements.btnTimerBreakdown) {
     elements.btnTimerBreakdown.addEventListener("click", openTimerBreakdownModal);
-  }
-  if (elements.btnTimerDetails) {
-    elements.btnTimerDetails.addEventListener("click", openTimerBreakdownModal);
   }
   if (elements.btnCloseTimerModal && elements.timerBreakdownModal) {
     elements.btnCloseTimerModal.addEventListener("click", () => {
@@ -1671,7 +1668,7 @@ function renderTimerBreakdownModal() {
     const pTimer = ensureProblemTimer(state.activeContestId, p.problem_id);
     const statusData = state.problemStatuses[p.problem_id];
     const isActive = p.problem_id === state.activeProblemId;
-    const isSolved = Boolean(pTimer.solved || (statusData && statusData.verdict === "AC"));
+    const isSolved = Boolean(pTimer.solved);
 
     let badgeHtml = `<span class="verdict-badge verdict-empty">Pending</span>`;
     if (isSolved) {
@@ -2328,11 +2325,12 @@ function renderLeetCodeResult(summary) {
     elements.lcMemoryVal.textContent = `${Number(summary.max_memory_mb || 0).toFixed(1)} MB`;
   }
 
-  // Update problem solved / wrong attempt status
+  // Update problem solved / wrong attempt status (only Submit / suite='all' marks AC)
   if (state.activeProblemId) {
-    if (summary.overall_verdict === "AC") {
+    const isSubmissionRun = (summary.suite || state.lastJudgeSuite) === "all";
+    if (summary.overall_verdict === "AC" && isSubmissionRun) {
       state.problemStatuses[state.activeProblemId] = { verdict: "AC", timestamp: Date.now() };
-    } else {
+    } else if (summary.overall_verdict !== "AC") {
       const existing = state.problemStatuses[state.activeProblemId];
       if (!existing || existing.verdict !== "AC") {
         state.problemStatuses[state.activeProblemId] = { verdict: summary.overall_verdict, timestamp: Date.now() };
