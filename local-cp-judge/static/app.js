@@ -87,6 +87,7 @@ const state = {
 // =====================================================================
 const elements = {
   contestSelect: document.getElementById("contest-select"),
+  btnMockQuiz: document.getElementById("btn-mock-quiz"),
   problemSelect: document.getElementById("problem-select"),
   activeProblemDot: document.getElementById("active-problem-dot"),
   btnPrevProblem: document.getElementById("btn-prev-problem"),
@@ -3090,6 +3091,65 @@ async function uploadZipFile(file) {
   }
 }
 
+async function generateNewMockQuiz() {
+  const existingMockTimer = state.timer.contests["mock-quiz"];
+  const hasProgress = Boolean(
+    existingMockTimer &&
+    (existingMockTimer.contestElapsedSec > 0 ||
+      Object.values(existingMockTimer.problems || {}).some((pt) => pt && (pt.elapsedSec > 0 || pt.solved)))
+  );
+
+  if (hasProgress && !confirm("Generate a brand-new 4-question Mock Quiz? This will reset your current Mock Quiz code and timer.")) {
+    return;
+  }
+
+  const btn = elements.btnMockQuiz;
+  const prevHtml = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "<i data-lucide='refresh-cw' class='icon-sync'></i>";
+    refreshIcons();
+  }
+
+  try {
+    if (state.activeContestId === "mock-quiz" && state.timer.isRunning) {
+      pauseTimer();
+    }
+
+    const res = await fetch("/api/contests/mock-quiz", { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to generate mock quiz");
+    }
+    const contestMeta = await res.json();
+
+    // Reset local browser state for mock-quiz so the new quiz starts clean
+    try {
+      localStorage.removeItem("localcp_problem_statuses_mock-quiz");
+    } catch (e) {}
+    delete state.timer.contests["mock-quiz"];
+    saveTimersMap();
+    Object.keys(state.submissionHistoryMap).forEach((k) => {
+      if (k.startsWith("mock-quiz/")) {
+        delete state.submissionHistoryMap[k];
+      }
+    });
+    saveSubmissionHistoryMap();
+
+    state.activeContestId = contestMeta.contest_id;
+    await loadContestsList();
+    updateTimerDisplay();
+  } catch (err) {
+    alert(`Could not generate Mock Quiz: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = prevHtml;
+      refreshIcons();
+    }
+  }
+}
+
 // =====================================================================
 // Event Listeners & Initialization
 // =====================================================================
@@ -3101,6 +3161,10 @@ function initEventListeners() {
       selectContest(e.target.value);
     }
   });
+
+  if (elements.btnMockQuiz) {
+    elements.btnMockQuiz.addEventListener("click", generateNewMockQuiz);
+  }
 
   // Archive Upload
   elements.btnUpload.addEventListener("click", () => {

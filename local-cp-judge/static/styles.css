@@ -299,6 +299,18 @@ body {
   height: 15px;
 }
 
+.btn-mock-quiz {
+  color: #C4B5FD;
+  border-color: rgba(139, 92, 246, 0.3);
+  background-color: rgba(139, 92, 246, 0.1);
+}
+
+.btn-mock-quiz:hover:not(:disabled) {
+  color: #DDD6FE;
+  border-color: rgba(139, 92, 246, 0.55);
+  background-color: rgba(139, 92, 246, 0.18);
+}
+
 .problem-status-dot {
   width: 7px;
   height: 7px;
@@ -2867,6 +2879,7 @@ body {
 
 @media (max-width: 1200px) {
   .btn-next-problem span,
+  .btn-mock-quiz span,
   .pill-upload span {
     display: none;
   }

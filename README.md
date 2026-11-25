@@ -4,7 +4,7 @@ A standalone local competitive programming web judge and workspace manager for D
 
 ## Features
 * **Obsidian Dark Workspace:** Monaco Editor with a language dropdown (`Python 3 (solution.py)`, `Java (Main.java)`), problem-specific starter templates (including `10Sep` and `17Sep` DP contests), side-by-side Visual Diff Inspector, and `< 1024px` responsive layout.
-* **Chronological Contest Flow & LeetCode-Style Header:** Contests ordered chronologically (`10Sep` through `25Nov`) with `Prev` / `Next` problem buttons and centered `Run` / `Submit` controls.
+* **Chronological Contest Flow & Mockup Quiz:** Contests ordered chronologically (`10Sep` through `25Nov`) with `Prev` / `Next` problem buttons, centered `Run` / `Submit` controls, per-contest and per-question timers, and a **Mock Quiz** generator (`Mock` button / `POST /api/contests/mock-quiz`) that builds a fresh 4-question (`A`/`B`/`C`/`D`) mixed quiz across distinct contests.
 * **Unified Dark Markdown Statements + PDF Toggle:** All 9 contests (`36` problems) render with unified Obsidian Dark Markdown styling by default, with a `View PDF` / `Dark Markdown` toggle on PDF-backed contests (`15Oct`, `22Oct`, `24Oct Makeup`, `29Oct`).
 * **Left `Description | Submissions` Panel:** Per-problem run/submission history storing full untruncated `stderr` tracebacks, per-testcase I/O inspection, and 1-click code restore.
 * **Editable Sample Test Cases Only:** Edit sample inputs and expected outputs per session in the **Sample Cases** tab (or via **Edit Sample** in **Test Verdicts**) with **Reset Case** / **Reset All**. Secret test cases remain locked; **Run Samples** (`Ctrl + '`) runs edited samples while **Judge All** (`Ctrl + Enter`) runs official contest tests.

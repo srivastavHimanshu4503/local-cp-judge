@@ -42,7 +42,9 @@ from app.models import (
     Verdict,
 )
 from app.parser import (
+    MOCK_QUIZ_CONTEST_ID,
     extract_and_parse_contest,
+    generate_mock_quiz,
     get_problem_test_cases,
     is_ignored_path,
     list_contests,
@@ -291,9 +293,50 @@ async def upload_contest(file: UploadFile = File(...)) -> ContestMeta:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+def _ensure_mock_quiz_exists() -> None:
+    """Seeds an initial 4-question Mock Quiz contest if none exists yet."""
+    mock_meta = WORKSPACES_ROOT / MOCK_QUIZ_CONTEST_ID / "contest_meta.json"
+    if mock_meta.exists():
+        return
+    try:
+        generate_mock_quiz(WORKSPACES_ROOT, TEMPLATES_DIR, contest_id=MOCK_QUIZ_CONTEST_ID, seed=42)
+    except Exception:
+        pass
+
+
+@app.post("/api/contests/mock-quiz", response_model=ContestMeta)
+async def create_or_shuffle_mock_quiz(
+    seed: Optional[int] = Query(default=None),
+    session_id: Optional[str] = Depends(get_session_id),
+) -> ContestMeta:
+    """Generates a fresh 4-question Mockup Quiz (A, B, C, D) from different available contests."""
+    try:
+        contest_meta = await asyncio.to_thread(
+            generate_mock_quiz,
+            WORKSPACES_ROOT,
+            TEMPLATES_DIR,
+            MOCK_QUIZ_CONTEST_ID,
+            seed,
+        )
+        sid = _sanitize_session_id(session_id)
+        if sid:
+            user_mock_dir = USER_WORKSPACES_ROOT / sid / MOCK_QUIZ_CONTEST_ID
+            if user_mock_dir.exists():
+                shutil.rmtree(user_mock_dir, ignore_errors=True)
+        return contest_meta
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate mock quiz: {e}",
+        )
+
+
 @app.get("/api/contests", response_model=list[ContestMeta])
 def list_all_contests() -> list[ContestMeta]:
     """Lists all imported contests in workspaces_root."""
+    _ensure_mock_quiz_exists()
     return list_contests(WORKSPACES_ROOT)
 
 

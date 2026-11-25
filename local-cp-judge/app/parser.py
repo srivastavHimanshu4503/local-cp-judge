@@ -3,6 +3,7 @@ from __future__ import annotations
 import configparser
 import json
 import os
+import random
 import re
 import shutil
 import zipfile
@@ -479,6 +480,7 @@ def parse_contest_dir(
     contest_dir: Path,
     templates_dir: Path,
     contest_id: Optional[str] = None,
+    contest_title: Optional[str] = None,
 ) -> ContestMeta:
     """
     Parses an already extracted or existing contest directory, indexing all problems,
@@ -510,7 +512,14 @@ def parse_contest_dir(
     problems.sort(key=lambda p: natural_sort_key(p.short_name))
 
     known = KNOWN_CONTEST_SCHEDULE.get(contest_id.lower())
-    clean_title = known[2] if known else contest_id.replace('-', ' ').replace('_', ' ').title()
+    if contest_title:
+        clean_title = contest_title
+    elif known:
+        clean_title = known[2]
+    elif contest_id == MOCK_QUIZ_CONTEST_ID:
+        clean_title = "Mock Quiz (Mixed)"
+    else:
+        clean_title = contest_id.replace('-', ' ').replace('_', ' ').title()
     contest = ContestMeta(
         contest_id=contest_id,
         title=clean_title,
@@ -693,6 +702,142 @@ def _meta_needs_refresh(contest_dir: Path, meta: ContestMeta) -> bool:
     return False
 
 
+MOCK_QUIZ_CONTEST_ID = "mock-quiz"
+MOCK_QUIZ_EXCLUDED_DIRS = {"workspace", ".build", ".cph", "custom_tests", "sample_overrides", "__MACOSX"}
+
+
+def _mock_copy_ignore(_src_dir: str, names: list[str]) -> set[str]:
+    ignored: set[str] = set()
+    for name in names:
+        if name in MOCK_QUIZ_EXCLUDED_DIRS or name.startswith("._") or name == ".DS_Store":
+            ignored.add(name)
+    return ignored
+
+
+def _select_mock_problems(
+    candidates_by_slot: dict[str, list[tuple[ContestMeta, ProblemMeta]]],
+    prev_pairs: set[tuple[str, str]],
+    rng: random.Random,
+) -> list[tuple[str, ContestMeta, ProblemMeta]]:
+    slots = ["A", "B", "C", "D"]
+    ordered: dict[str, list[tuple[ContestMeta, ProblemMeta]]] = {}
+    for slot in slots:
+        pool = list(candidates_by_slot.get(slot, []))
+        rng.shuffle(pool)
+        # Prefer problems that were not in the previous mock quiz
+        pool.sort(key=lambda pair: 1 if (pair[0].contest_id, pair[1].problem_id) in prev_pairs else 0)
+        ordered[slot] = pool
+
+    # Backtracking search enforcing distinct source contests across A, B, C, D
+    picked: list[tuple[str, ContestMeta, ProblemMeta]] = []
+    used_contests: set[str] = set()
+
+    def backtrack(idx: int) -> bool:
+        if idx == len(slots):
+            return True
+        slot = slots[idx]
+        for contest_meta, prob_meta in ordered[slot]:
+            if contest_meta.contest_id in used_contests:
+                continue
+            used_contests.add(contest_meta.contest_id)
+            picked.append((slot, contest_meta, prob_meta))
+            if backtrack(idx + 1):
+                return True
+            picked.pop()
+            used_contests.remove(contest_meta.contest_id)
+        return False
+
+    if backtrack(0):
+        return picked
+
+    # Fallback if fewer than 4 distinct contests exist
+    fallback: list[tuple[str, ContestMeta, ProblemMeta]] = []
+    for slot in slots:
+        pool = ordered[slot]
+        if not pool:
+            continue
+        unused = next(((c, p) for c, p in pool if c.contest_id not in {x[1].contest_id for x in fallback}), pool[0])
+        fallback.append((slot, unused[0], unused[1]))
+    return fallback
+
+
+def generate_mock_quiz(
+    workspaces_root: Path,
+    templates_dir: Path,
+    contest_id: str = MOCK_QUIZ_CONTEST_ID,
+    seed: Optional[int] = None,
+) -> ContestMeta:
+    """
+    Creates a 4-question Mockup Quiz contest (slots A, B, C, D) by picking one problem
+    per difficulty slot from 4 distinct contests across all available contests.
+    """
+    all_contests = list_contests(workspaces_root)
+    source_contests = [c for c in all_contests if not c.contest_id.startswith("mock-quiz")]
+    if not source_contests:
+        raise ValueError("No source contests available to build a mock quiz.")
+
+    candidates_by_slot: dict[str, list[tuple[ContestMeta, ProblemMeta]]] = {"A": [], "B": [], "C": [], "D": []}
+    for c in source_contests:
+        for p in c.problems:
+            slot = (p.short_name or p.problem_id[:1]).upper()
+            if slot in candidates_by_slot:
+                candidates_by_slot[slot].append((c, p))
+
+    target_dir = workspaces_root / contest_id
+    prev_pairs: set[tuple[str, str]] = set()
+    sources_meta_path = target_dir / "mock_quiz_sources.json"
+    if sources_meta_path.exists():
+        try:
+            old_data = json.loads(sources_meta_path.read_text(encoding="utf-8", errors="replace"))
+            for item in old_data.get("sources", []):
+                prev_pairs.add((item.get("source_contest", ""), item.get("source_problem", "")))
+        except Exception:
+            pass
+
+    rng = random.Random(seed) if seed is not None else random.Random()
+    selected = _select_mock_problems(candidates_by_slot, prev_pairs, rng)
+    if len(selected) < 4:
+        raise ValueError("Not enough A/B/C/D problems across available contests to build a 4-question mock quiz.")
+
+    staging_dir = workspaces_root / f".staging_{contest_id}"
+    if staging_dir.exists():
+        shutil.rmtree(staging_dir, ignore_errors=True)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+
+    source_records: list[dict[str, str]] = []
+    for slot, src_contest, src_prob in selected:
+        src_prob_dir = workspaces_root / src_contest.contest_id / src_prob.problem_id
+        dest_prob_dir = staging_dir / src_prob.problem_id
+        # Ensure unique folder name if a fallback collision ever happened
+        if dest_prob_dir.exists():
+            dest_prob_dir = staging_dir / f"{slot}-{src_contest.contest_id}-{src_prob.problem_id}"
+
+        shutil.copytree(src_prob_dir, dest_prob_dir, ignore=_mock_copy_ignore)
+        source_records.append({
+            "slot": slot,
+            "source_contest": src_contest.contest_id,
+            "source_contest_title": src_contest.title,
+            "source_problem": src_prob.problem_id,
+            "name": src_prob.name,
+        })
+
+    if target_dir.exists():
+        shutil.rmtree(target_dir, ignore_errors=True)
+    shutil.move(str(staging_dir), str(target_dir))
+
+    (target_dir / "mock_quiz_sources.json").write_text(
+        json.dumps({"sources": source_records}, indent=2),
+        encoding="utf-8",
+    )
+
+    return parse_contest_dir(
+        target_dir,
+        templates_dir,
+        contest_id=contest_id,
+        contest_title="Mock Quiz (Mixed)",
+    )
+
+
 def list_contests(workspaces_root: Path) -> list[ContestMeta]:
     """
     Scans workspaces_root for imported contests containing contest_meta.json.
@@ -705,14 +850,15 @@ def list_contests(workspaces_root: Path) -> list[ContestMeta]:
     contests: list[ContestMeta] = []
     templates_dir = workspaces_root.parent / "templates"
     for item in workspaces_root.iterdir():
-        if item.is_dir() and not is_ignored_path(item):
+        if item.is_dir() and not is_ignored_path(item) and not item.name.startswith("."):
             meta_path = item / "contest_meta.json"
             if meta_path.exists() and meta_path.is_file():
                 try:
                     content = meta_path.read_text(encoding="utf-8", errors="replace")
                     meta = ContestMeta.model_validate_json(content)
                     if _meta_needs_refresh(item, meta):
-                        meta = parse_contest_dir(item, templates_dir, contest_id=meta.contest_id)
+                        custom_title = meta.title if (item / "mock_quiz_sources.json").exists() else None
+                        meta = parse_contest_dir(item, templates_dir, contest_id=meta.contest_id, contest_title=custom_title)
                     contests.append(meta)
                 except Exception:
                     pass
@@ -735,5 +881,6 @@ def load_contest(contest_id: str, workspaces_root: Path) -> ContestMeta:
     content = meta_path.read_text(encoding="utf-8", errors="replace")
     meta = ContestMeta.model_validate_json(content)
     if _meta_needs_refresh(contest_dir, meta):
-        meta = parse_contest_dir(contest_dir, workspaces_root.parent / "templates", contest_id=meta.contest_id)
+        custom_title = meta.title if (contest_dir / "mock_quiz_sources.json").exists() else None
+        meta = parse_contest_dir(contest_dir, workspaces_root.parent / "templates", contest_id=meta.contest_id, contest_title=custom_title)
     return meta

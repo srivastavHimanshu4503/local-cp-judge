@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parent
 APP_ROOT = ROOT / "local-cp-judge"
 sys.path.insert(0, str(APP_ROOT))
 
-from app.parser import extract_and_parse_contest
+from app.parser import MOCK_QUIZ_CONTEST_ID, extract_and_parse_contest, generate_mock_quiz
 from populate_15oct_statements import populate_15oct_statements
 
 
@@ -32,6 +32,10 @@ def main() -> None:
     updated_15oct = populate_15oct_statements(workspaces_root)
     if updated_15oct:
         print(f"[STATEMENTS] Populated {updated_15oct} Markdown/HTML statements for 15oct-contest.")
+
+    if not (workspaces_root / MOCK_QUIZ_CONTEST_ID / "contest_meta.json").exists():
+        mock_meta = generate_mock_quiz(workspaces_root, templates_dir, contest_id=MOCK_QUIZ_CONTEST_ID, seed=42)
+        print(f"[MOCK] Generated {mock_meta.title} ({len(mock_meta.problems)} problems).")
 
 
 if __name__ == "__main__":
