@@ -32,8 +32,10 @@ from app.models import (
     CustomTestCaseItem,
     JudgeRunRequest,
     JudgeSummary,
+    OfficialSolutionItem,
     OpenExternalRequest,
     ProblemMeta,
+    ProblemSolutionsResponse,
     SampleTestCaseItem,
     SampleTestCaseUpdate,
     StressTestRequest,
@@ -599,6 +601,31 @@ blockquote {
   border-radius: 8px !important;
 }
 blockquote p { margin: 0 !important; }
+.obsidian-origin-banner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  padding: 9px 14px !important;
+  margin-bottom: 16px !important;
+  background: rgba(139, 92, 246, 0.1) !important;
+  border: 1px solid rgba(139, 92, 246, 0.32) !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  color: #E4E4E7 !important;
+}
+.obsidian-origin-tag {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: #DDD6FE !important;
+  background: rgba(139, 92, 246, 0.22) !important;
+  padding: 2px 7px !important;
+  border-radius: 5px !important;
+  margin-right: 8px !important;
+}
 </style>"""
 
 
@@ -658,15 +685,33 @@ def _render_plain_markdown_to_html(md_text: str, title: str = "Problem Statement
     return f"<!doctype html><html><head><meta charset='utf-8'><title>{html_lib.escape(title)}</title></head><body><main>{''.join(out)}</main></body></html>"
 
 
-def _inject_obsidian_css(raw_html: str) -> str:
-    """Appends Obsidian Dark Markdown CSS last in document order so it overrides any legacy styles."""
-    if "obsidian-markdown-v2" in raw_html:
-        return raw_html
-    if "</body>" in raw_html:
-        return raw_html.replace("</body>", OBSIDIAN_STATEMENT_CSS + "\n</body>", 1)
-    if "</html>" in raw_html:
-        return raw_html.replace("</html>", OBSIDIAN_STATEMENT_CSS + "\n</html>", 1)
-    return raw_html + "\n" + OBSIDIAN_STATEMENT_CSS
+def _inject_obsidian_css(raw_html: str, prob: Optional[ProblemMeta] = None) -> str:
+    """Appends Obsidian Dark Markdown CSS last in document order and optional mock source banner."""
+    import html as html_lib
+
+    html_out = raw_html
+    if prob and prob.source_contest_title and "obsidian-origin-banner" not in html_out:
+        origin_text = f"{prob.source_contest_title} &bull; Problem {html_lib.escape(prob.short_name)}"
+        if prob.source_problem_id:
+            origin_text += f" ({html_lib.escape(prob.source_problem_id)})"
+        banner_html = (
+            '<div class="obsidian-origin-banner">'
+            '<div><span class="obsidian-origin-tag">Mockup Source</span>'
+            f'<span>Belongs to <strong>{origin_text}</strong></span></div>'
+            '</div>'
+        )
+        if "<main>" in html_out:
+            html_out = html_out.replace("<main>", f"<main>\n{banner_html}", 1)
+        elif re.search(r"<body[^>]*>", html_out, flags=re.IGNORECASE):
+            html_out = re.sub(r"(<body[^>]*>)", rf"\1\n{banner_html}", html_out, count=1, flags=re.IGNORECASE)
+
+    if "obsidian-markdown-v2" in html_out:
+        return html_out
+    if "</body>" in html_out:
+        return html_out.replace("</body>", OBSIDIAN_STATEMENT_CSS + "\n</body>", 1)
+    if "</html>" in html_out:
+        return html_out.replace("</html>", OBSIDIAN_STATEMENT_CSS + "\n</html>", 1)
+    return html_out + "\n" + OBSIDIAN_STATEMENT_CSS
 
 
 @app.get("/api/problems/{contest_id}/{problem_id}/statement")
@@ -674,11 +719,13 @@ def get_problem_statement(
     contest_id: str,
     problem_id: str,
     format: str = Query(default="auto"),
+    embed: int = Query(default=0),
 ):
     """Serves unified dark Markdown/HTML statement by default, or PDF when format='pdf'."""
     _, prob = get_contest_and_problem(contest_id, problem_id)
     problem_dir = WORKSPACES_ROOT / contest_id / problem_id
     req_fmt = (format or "auto").lower().strip()
+    banner_prob = None if embed else prob
 
     pdf_candidates = [problem_dir / "problem.pdf", problem_dir / "statement" / "problem.pdf"]
 
@@ -695,14 +742,14 @@ def get_problem_statement(
     # 1. Prefer HTML statements and wrap/override uniformly in Obsidian Dark Markdown v2
     for candidate in [problem_dir / "statement.html", problem_dir / "problem.html", problem_dir / "statement" / "problem.html"]:
         if candidate.exists() and candidate.is_file():
-            raw_html = _inject_obsidian_css(candidate.read_text(encoding="utf-8", errors="replace"))
+            raw_html = _inject_obsidian_css(candidate.read_text(encoding="utf-8", errors="replace"), prob=banner_prob)
             return HTMLResponse(content=raw_html)
 
     # 2. Markdown fallback if only .md exists
     for candidate in [problem_dir / "problem.md", problem_dir / "statement.md", problem_dir / "statement" / "problem.md"]:
         if candidate.exists() and candidate.is_file():
             md_html = _render_plain_markdown_to_html(candidate.read_text(encoding="utf-8", errors="replace"), title=prob.name)
-            return HTMLResponse(content=_inject_obsidian_css(md_html))
+            return HTMLResponse(content=_inject_obsidian_css(md_html, prob=banner_prob))
 
     # 3. PDF-only fallback (try pdftotext -> dark view, else inline PDF)
     for candidate in pdf_candidates:
@@ -717,7 +764,7 @@ def get_problem_statement(
                     ext = subprocess.run([pdftotext_cmd, str(candidate), "-"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
                     if ext.returncode == 0 and ext.stdout.strip():
                         md_html = _render_plain_markdown_to_html(ext.stdout, title=prob.name)
-                        return HTMLResponse(content=_inject_obsidian_css(md_html))
+                        return HTMLResponse(content=_inject_obsidian_css(md_html, prob=banner_prob))
                 except Exception:
                     pass
             return FileResponse(
@@ -736,6 +783,78 @@ def get_problem_statement(
 def get_problem_pdf(contest_id: str, problem_id: str):
     """Serves the problem statement PDF with inline content disposition."""
     return get_problem_statement(contest_id, problem_id, format="pdf")
+
+
+def _solution_priority(file_path: Path, short_name: str, lang: str) -> tuple[int, list[int | str]]:
+    """Orders accepted solutions so the clearest canonical reference appears first."""
+    name_lower = file_path.name.lower()
+    stem_lower = file_path.stem.lower()
+    short_lower = (short_name or "").lower()
+    if lang == "python":
+        if name_lower == "ref.py":
+            rank = 0
+        elif name_lower == "solution.py":
+            rank = 1
+        elif short_lower and stem_lower == short_lower:
+            rank = 2
+        else:
+            rank = 3
+    else:
+        if name_lower == "ref.java":
+            rank = 0
+        elif name_lower == "main.java":
+            rank = 1
+        elif name_lower == "solution.java":
+            rank = 2
+        elif short_lower and stem_lower == short_lower:
+            rank = 3
+        else:
+            rank = 4
+    return (rank, natural_sort_key(file_path.name))
+
+
+@app.get("/api/problems/{contest_id}/{problem_id}/solutions", response_model=ProblemSolutionsResponse)
+def get_problem_solutions(contest_id: str, problem_id: str) -> ProblemSolutionsResponse:
+    """Returns official accepted Python and Java solutions for Practice Mode inspection."""
+    _, prob = get_contest_and_problem(contest_id, problem_id)
+    problem_dir = WORKSPACES_ROOT / contest_id / prob.problem_id
+
+    candidate_roots = [problem_dir / "submissions" / "accepted", problem_dir / "solutions" / "accepted"]
+    if prob.source_contest_id and prob.source_problem_id:
+        src_dir = WORKSPACES_ROOT / prob.source_contest_id / prob.source_problem_id
+        candidate_roots.extend([src_dir / "submissions" / "accepted", src_dir / "solutions" / "accepted"])
+
+    by_lang_files: dict[str, dict[str, Path]] = {"python": {}, "java": {}}
+    for acc_dir in candidate_roots:
+        if not acc_dir.exists() or not acc_dir.is_dir():
+            continue
+        for f in acc_dir.iterdir():
+            if not f.is_file() or is_ignored_path(f):
+                continue
+            lang_key = EXTENSION_TO_LANG.get(f.suffix.lower())
+            if lang_key and f.name not in by_lang_files[lang_key]:
+                by_lang_files[lang_key][f.name] = f
+
+    grouped: dict[str, list[OfficialSolutionItem]] = {"python": [], "java": []}
+    for lang_key in ("python", "java"):
+        files = sorted(by_lang_files[lang_key].values(), key=lambda p: _solution_priority(p, prob.short_name, lang_key))
+        for idx, sol_file in enumerate(files):
+            grouped[lang_key].append(
+                OfficialSolutionItem(
+                    lang=lang_key,
+                    filename=sol_file.name,
+                    ref_path=f"accepted/{sol_file.name}",
+                    code=sol_file.read_text(encoding="utf-8", errors="replace"),
+                    is_primary=(idx == 0),
+                )
+            )
+
+    return ProblemSolutionsResponse(
+        contest_id=contest_id,
+        problem_id=prob.problem_id,
+        python=grouped["python"],
+        java=grouped["java"],
+    )
 
 
 @app.get("/api/problems/{contest_id}/{problem_id}/code", response_model=CodeResponse)

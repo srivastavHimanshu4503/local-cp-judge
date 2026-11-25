@@ -1,7 +1,7 @@
 {
   "contest_id": "17sep-contest",
   "title": "17Sep Contest",
-  "created_at": "2026-11-25T18:44:06.139892+00:00",
+  "created_at": "2026-11-25T22:31:54.794839+00:00",
   "problems": [
     {
       "problem_id": "A-alternating-sequences",
@@ -22,6 +22,7 @@
       },
       "reference_submissions": {
         "accepted": [
+          "Main.java",
           "solution.py"
         ]
       }
@@ -45,6 +46,7 @@
       },
       "reference_submissions": {
         "accepted": [
+          "Main.java",
           "solution.py"
         ]
       }
@@ -68,6 +70,7 @@
       },
       "reference_submissions": {
         "accepted": [
+          "Main.java",
           "solution.py"
         ]
       }
@@ -91,6 +94,7 @@
       },
       "reference_submissions": {
         "accepted": [
+          "Main.java",
           "solution.py"
         ]
       }

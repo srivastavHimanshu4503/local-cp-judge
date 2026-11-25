@@ -526,6 +526,7 @@ def parse_contest_dir(
         created_at=datetime.now(timezone.utc).isoformat(),
         problems=problems,
     )
+    _attach_mock_sources(contest_dir, contest)
 
     # Persist contest_meta.json in contest root
     meta_path = contest_dir / "contest_meta.json"
@@ -678,15 +679,54 @@ def extract_and_parse_contest(
     return parse_contest_dir(contest_dir, templates_dir, contest_id=contest_id)
 
 
+def _attach_mock_sources(contest_dir: Path, meta: ContestMeta) -> ContestMeta:
+    """Enriches mockup contest problems with their source contest metadata from mock_quiz_sources.json."""
+    sources_path = contest_dir / "mock_quiz_sources.json"
+    if not sources_path.exists() or not sources_path.is_file():
+        return meta
+    try:
+        raw = json.loads(sources_path.read_text(encoding="utf-8", errors="replace"))
+        records = raw.get("sources", []) if isinstance(raw, dict) else []
+    except Exception:
+        return meta
+
+    by_slot = {
+        str(item.get("slot", "")).upper(): item
+        for item in records
+        if isinstance(item, dict) and item.get("slot")
+    }
+    by_prob = {
+        str(item.get("source_problem", "")): item
+        for item in records
+        if isinstance(item, dict) and item.get("source_problem")
+    }
+    for p in meta.problems:
+        slot = (p.short_name or p.problem_id[:1]).upper()
+        rec = by_prob.get(p.problem_id) or by_slot.get(slot)
+        if rec:
+            p.source_contest_id = rec.get("source_contest") or None
+            p.source_contest_title = rec.get("source_contest_title") or None
+            p.source_problem_id = rec.get("source_problem") or None
+    return meta
+
+
 def _meta_needs_refresh(contest_dir: Path, meta: ContestMeta) -> bool:
-    """Detects stale contest_meta.json missing statement flags, outdated titles, or removed cpp entries."""
+    """Detects stale contest_meta.json missing statement flags, accepted solutions, mock origin, or removed cpp entries."""
     known = KNOWN_CONTEST_SCHEDULE.get(meta.contest_id.lower())
     if known and meta.title != known[2]:
         return True
+    has_mock_sources = (contest_dir / "mock_quiz_sources.json").exists()
     for p in meta.problems:
         if "cpp" in p.files:
             return True
+        if has_mock_sources and not p.source_contest_id:
+            return True
         prob_dir = contest_dir / p.problem_id
+        acc_dir = prob_dir / "submissions" / "accepted"
+        actual_acc = len([f for f in acc_dir.iterdir() if f.is_file() and not is_ignored_path(f)]) if acc_dir.exists() else 0
+        cached_acc = len(p.reference_submissions.get("accepted", []))
+        if actual_acc != cached_acc:
+            return True
         has_pdf = (prob_dir / "problem.pdf").exists() or (prob_dir / "statement" / "problem.pdf").exists()
         has_html = (
             (prob_dir / "statement.html").exists()

@@ -68,6 +68,9 @@ const state = {
   consoleHeight: 240,
   isSidebarOpen: true,
   leftTab: "description",
+  solutionsCache: {},
+  solutionViewLang: "python",
+  solutionSelectedVariant: { python: 0, java: 0 },
   submissionHistoryMap: {},
   activeSubmissionId: null,
   activeSubmissionEntry: null,
@@ -105,7 +108,9 @@ const elements = {
   btnToggleSidebar: document.getElementById("btn-toggle-sidebar"),
   btnCollapseSidebar: document.getElementById("btn-collapse-sidebar"),
 
-  // Contest & Question Timers
+  // Contest Mode Switch & Contest / Question Timers
+  btnModePractice: document.getElementById("btn-mode-practice"),
+  btnModeContest: document.getElementById("btn-mode-contest"),
   contestTimer: document.getElementById("contest-timer"),
   btnTimerBreakdown: document.getElementById("btn-timer-breakdown"),
   timerDisplay: document.getElementById("timer-display"),
@@ -126,12 +131,27 @@ const elements = {
   timerBreakdownList: document.getElementById("timer-breakdown-list"),
   btnResetContestTimer: document.getElementById("btn-reset-contest-timer"),
 
-  // Left Column (Statement & Submissions)
+  // Left Column (Statement, Submissions & Official Solution)
   panePdf: document.getElementById("pane-pdf"),
   leftPaneTabs: document.getElementById("left-pane-tabs"),
   leftSubCount: document.getElementById("left-sub-count"),
+  btnLeftTabSolution: document.getElementById("btn-left-tab-solution"),
   leftViewDescription: document.getElementById("left-view-description"),
+  descriptionOriginHeader: document.getElementById("description-origin-header"),
+  originContestLabel: document.getElementById("origin-contest-label"),
+  btnReviewOriginContest: document.getElementById("btn-review-origin-contest"),
   leftViewSubmissions: document.getElementById("left-view-submissions"),
+  leftViewSolution: document.getElementById("left-view-solution"),
+  solutionEmptyState: document.getElementById("solution-empty-state"),
+  solutionEmptyMsg: document.getElementById("solution-empty-msg"),
+  solutionContentWrap: document.getElementById("solution-content-wrap"),
+  btnSolLangPython: document.getElementById("btn-sol-lang-python"),
+  btnSolLangJava: document.getElementById("btn-sol-lang-java"),
+  solVariantSelect: document.getElementById("sol-variant-select"),
+  btnLoadOfficialSolution: document.getElementById("btn-load-official-solution"),
+  btnCopyOfficialSolution: document.getElementById("btn-copy-official-solution"),
+  solutionFileMeta: document.getElementById("solution-file-meta"),
+  solutionCodePre: document.getElementById("solution-code-pre"),
   pdfViewer: document.getElementById("pdf-viewer"),
   pdfFallback: document.getElementById("pdf-fallback"),
   btnTogglePdf: document.getElementById("btn-toggle-pdf"),
@@ -475,11 +495,15 @@ function zoomReset() {
 
 function getActiveStatementUrl(
   contestId = state.activeContestId,
-  problemId = state.activeProblemId
+  problemId = state.activeProblemId,
+  { embedded = false } = {}
 ) {
   if (!contestId || !problemId) return "about:blank";
   const base = `/api/problems/${contestId}/${problemId}/statement`;
-  return state.statementFormat === "pdf" ? `${base}?format=pdf` : base;
+  const params = [];
+  if (state.statementFormat === "pdf") params.push("format=pdf");
+  if (embedded) params.push("embed=1");
+  return params.length > 0 ? `${base}?${params.join("&")}` : base;
 }
 
 function updateStatementViewer() {
@@ -514,7 +538,7 @@ function updateStatementViewer() {
       : "View original contest PDF";
   }
 
-  elements.pdfViewer.src = getActiveStatementUrl();
+  elements.pdfViewer.src = getActiveStatementUrl(state.activeContestId, state.activeProblemId, { embedded: true });
   elements.pdfViewer.style.display = "block";
   elements.pdfFallback.style.display = "none";
 }
@@ -882,8 +906,141 @@ function verdictFullName(verdict) {
   return v || "Unknown";
 }
 
+function updateDescriptionOriginHeader(problem = state.activeProblem) {
+  if (!elements.descriptionOriginHeader || !elements.originContestLabel) return;
+  if (problem && problem.source_contest_id) {
+    const contestTitle = problem.source_contest_title || problem.source_contest_id;
+    const shortName = problem.short_name || "";
+    const probTitle = problem.name || problem.source_problem_id || "";
+    elements.originContestLabel.innerHTML =
+      `Belongs to <strong>${escapeHtml(contestTitle)}</strong> &bull; Problem ${escapeHtml(shortName)}` +
+      (probTitle ? ` — ${escapeHtml(probTitle)}` : "");
+    elements.originContestLabel.title = `${contestTitle} / ${problem.source_problem_id || probTitle}`;
+    elements.descriptionOriginHeader.style.display = "flex";
+    refreshIcons();
+  } else {
+    elements.descriptionOriginHeader.style.display = "none";
+  }
+}
+
+let _solutionColorizeSeq = 0;
+
+function getCurrentOfficialSolutionItem(payload) {
+  if (!payload) return null;
+  const lang = state.solutionViewLang === "java" ? "java" : "python";
+  const items = Array.isArray(payload[lang]) ? payload[lang] : [];
+  if (items.length === 0) return null;
+  const idx = Number(state.solutionSelectedVariant[lang] || 0);
+  return items[idx] || items[0];
+}
+
+function renderOfficialSolutionPanel(payload) {
+  if (!elements.solutionEmptyState || !elements.solutionContentWrap) return;
+  if (state.timer.mode === "contest") {
+    elements.solutionEmptyState.style.display = "flex";
+    elements.solutionContentWrap.style.display = "none";
+    if (elements.solutionEmptyMsg) {
+      elements.solutionEmptyMsg.textContent = "Official solutions are hidden during Contest mode. Switch to Practice mode to view.";
+    }
+    return;
+  }
+
+  const pyList = (payload && Array.isArray(payload.python)) ? payload.python : [];
+  const javaList = (payload && Array.isArray(payload.java)) ? payload.java : [];
+  if (pyList.length === 0 && javaList.length === 0) {
+    elements.solutionEmptyState.style.display = "flex";
+    elements.solutionContentWrap.style.display = "none";
+    if (elements.solutionEmptyMsg) {
+      elements.solutionEmptyMsg.textContent = "No official solution available for this problem.";
+    }
+    refreshIcons();
+    return;
+  }
+
+  let lang = state.solutionViewLang === "java" ? "java" : "python";
+  if (lang === "python" && pyList.length === 0 && javaList.length > 0) lang = "java";
+  if (lang === "java" && javaList.length === 0 && pyList.length > 0) lang = "python";
+  state.solutionViewLang = lang;
+
+  if (elements.btnSolLangPython) {
+    elements.btnSolLangPython.classList.toggle("active", lang === "python");
+    elements.btnSolLangPython.disabled = pyList.length === 0;
+  }
+  if (elements.btnSolLangJava) {
+    elements.btnSolLangJava.classList.toggle("active", lang === "java");
+    elements.btnSolLangJava.disabled = javaList.length === 0;
+  }
+
+  const items = lang === "java" ? javaList : pyList;
+  let selIdx = Number(state.solutionSelectedVariant[lang] || 0);
+  if (selIdx < 0 || selIdx >= items.length) selIdx = 0;
+  state.solutionSelectedVariant[lang] = selIdx;
+  const activeItem = items[selIdx];
+
+  if (elements.solVariantSelect) {
+    elements.solVariantSelect.innerHTML = "";
+    items.forEach((item, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = item.is_primary ? `${item.filename} (Recommended)` : item.filename;
+      elements.solVariantSelect.appendChild(opt);
+    });
+    elements.solVariantSelect.value = String(selIdx);
+    elements.solVariantSelect.style.display = items.length > 1 ? "inline-block" : "none";
+  }
+
+  elements.solutionEmptyState.style.display = "none";
+  elements.solutionContentWrap.style.display = "flex";
+
+  if (elements.solutionFileMeta) {
+    elements.solutionFileMeta.textContent = `submissions/${activeItem.ref_path}`;
+  }
+
+  const codeText = activeItem.code || "";
+  if (elements.solutionCodePre) {
+    elements.solutionCodePre.textContent = codeText;
+    if (window.monaco && window.monaco.editor && typeof window.monaco.editor.colorize === "function") {
+      const seq = ++_solutionColorizeSeq;
+      const monacoLang = lang === "java" ? "java" : "python";
+      window.monaco.editor.colorize(codeText, monacoLang, { tabSize: 4 }).then((coloredHtml) => {
+        if (seq !== _solutionColorizeSeq || !elements.solutionCodePre) return;
+        elements.solutionCodePre.innerHTML = coloredHtml;
+      }).catch(() => {});
+    }
+  }
+  refreshIcons();
+}
+
+async function loadAndRenderOfficialSolution() {
+  if (!state.activeContestId || !state.activeProblemId || state.timer.mode === "contest") return;
+  const cacheKey = `${state.activeContestId}/${state.activeProblemId}`;
+  if (state.solutionsCache[cacheKey]) {
+    renderOfficialSolutionPanel(state.solutionsCache[cacheKey]);
+    return;
+  }
+
+  if (elements.solutionContentWrap) elements.solutionContentWrap.style.display = "none";
+  if (elements.solutionEmptyState) elements.solutionEmptyState.style.display = "flex";
+  if (elements.solutionEmptyMsg) elements.solutionEmptyMsg.textContent = "Loading official Python & Java solutions...";
+
+  try {
+    const res = await fetch(`/api/problems/${state.activeContestId}/${state.activeProblemId}/solutions`);
+    if (!res.ok) throw new Error("Failed to fetch official solutions");
+    const data = await res.json();
+    state.solutionsCache[cacheKey] = data;
+    if (`${state.activeContestId}/${state.activeProblemId}` === cacheKey && state.leftTab === "solution") {
+      renderOfficialSolutionPanel(data);
+    }
+  } catch (err) {
+    if (elements.solutionEmptyState) elements.solutionEmptyState.style.display = "flex";
+    if (elements.solutionEmptyMsg) elements.solutionEmptyMsg.textContent = "Could not load official solutions for this problem.";
+  }
+}
+
 function setLeftTab(tabName) {
-  const target = tabName === "submissions" ? "submissions" : "description";
+  let target = "description";
+  if (tabName === "submissions") target = "submissions";
+  else if (tabName === "solution" && state.timer.mode !== "contest") target = "solution";
   state.leftTab = target;
   if (elements.leftPaneTabs) {
     elements.leftPaneTabs.querySelectorAll(".left-tab").forEach((btn) => {
@@ -896,8 +1053,13 @@ function setLeftTab(tabName) {
   if (elements.leftViewSubmissions) {
     elements.leftViewSubmissions.classList.toggle("active", target === "submissions");
   }
+  if (elements.leftViewSolution) {
+    elements.leftViewSolution.classList.toggle("active", target === "solution");
+  }
   if (target === "submissions") {
     renderSubmissionsHistory();
+  } else if (target === "solution") {
+    loadAndRenderOfficialSolution();
   }
 }
 
@@ -1442,11 +1604,15 @@ function formatDuration(totalSec, alwaysShowHours = true) {
 
 function initTimer() {
   loadTimersMap();
-  if (elements.timerModeBadge) {
-    elements.timerModeBadge.textContent = state.timer.mode === "contest" ? "Mode: 2h Contest" : "Mode: Practice";
-  }
+  setContestMode(state.timer.mode, { skipSave: true });
   updateTimerDisplay();
 
+  if (elements.btnModePractice) {
+    elements.btnModePractice.addEventListener("click", () => setContestMode("practice"));
+  }
+  if (elements.btnModeContest) {
+    elements.btnModeContest.addEventListener("click", () => setContestMode("contest"));
+  }
   if (elements.btnTimerToggle) {
     elements.btnTimerToggle.addEventListener("click", toggleTimer);
   }
@@ -1588,13 +1754,45 @@ function resetContestTimer(contestId = state.activeContestId) {
   }
 }
 
-function switchTimerMode() {
-  state.timer.mode = state.timer.mode === "practice" ? "contest" : "practice";
-  if (elements.timerModeBadge) {
-    elements.timerModeBadge.textContent = state.timer.mode === "contest" ? "Mode: 2h Contest" : "Mode: Practice";
+function applyContestModeVisibility() {
+  const isContest = state.timer.mode === "contest";
+  if (elements.btnModePractice) {
+    elements.btnModePractice.classList.toggle("active", !isContest);
   }
-  saveTimersMap();
+  if (elements.btnModeContest) {
+    elements.btnModeContest.classList.toggle("active", isContest);
+  }
+  if (elements.timerModeBadge) {
+    elements.timerModeBadge.textContent = isContest ? "Mode: 2h Contest" : "Mode: Practice";
+  }
+  if (elements.btnLeftTabSolution) {
+    elements.btnLeftTabSolution.style.display = isContest ? "none" : "inline-flex";
+    elements.btnLeftTabSolution.setAttribute("aria-hidden", isContest ? "true" : "false");
+  }
+  if (isContest && state.leftTab === "solution") {
+    setLeftTab("description");
+  } else if (!isContest && state.leftTab === "solution") {
+    loadAndRenderOfficialSolution();
+  }
+  if (isContest && state.activeRefPath && state.activeRefPath.startsWith("accepted/")) {
+    state.activeRefPath = null;
+    if (elements.refSubmissionSelect) elements.refSubmissionSelect.value = "";
+    loadActiveCode(true);
+  }
+  if (state.activeProblem) {
+    populateReferenceSelector(state.activeProblem.reference_submissions);
+  }
+}
+
+function setContestMode(mode, { skipSave = false } = {}) {
+  state.timer.mode = mode === "contest" ? "contest" : "practice";
+  applyContestModeVisibility();
+  if (!skipSave) saveTimersMap();
   updateTimerDisplay();
+}
+
+function switchTimerMode() {
+  setContestMode(state.timer.mode === "practice" ? "contest" : "practice");
 }
 
 function updateTimerDisplay() {
@@ -1804,7 +2002,7 @@ async function loadContestsList() {
   }
 }
 
-async function selectContest(contestId) {
+async function selectContest(contestId, initialProblemId = null) {
   try {
     if (state.activeContestId && state.activeContestId !== contestId && state.timer.isRunning) {
       pauseTimer();
@@ -1823,7 +2021,8 @@ async function selectContest(contestId) {
     renderProblemTabs(contestMeta.problems);
 
     if (contestMeta.problems.length > 0) {
-      await selectProblem(contestMeta.problems[0].problem_id);
+      const match = initialProblemId && contestMeta.problems.find((p) => p.problem_id === initialProblemId);
+      await selectProblem(match ? match.problem_id : contestMeta.problems[0].problem_id);
     } else {
       updateTimerDisplay();
     }
@@ -1905,8 +2104,9 @@ async function selectProblem(problemId) {
   renderProblemTabs(state.contestMeta.problems);
   updateProblemStatusPill();
 
-  // Render Statement (Unified Dark Markdown by default, optional PDF toggle)
+  // Render Statement (Unified Dark Markdown by default, optional PDF toggle) and Mockup Origin Header
   state.statementFormat = "auto";
+  updateDescriptionOriginHeader(problem);
   updateStatementViewer();
 
   // Populate reference submissions selector
@@ -1923,9 +2123,12 @@ async function selectProblem(problemId) {
   // Reset judge cards and results
   clearJudgeView();
 
-  // Default Left Panel to Problem Description when switching problems and refresh Submissions count
+  // Default Left Panel to Problem Description when switching problems, sync solution state & refresh Submissions count
   state.activeSubmissionId = null;
+  state.solutionViewLang = state.activeLang === "java" ? "java" : "python";
+  state.solutionSelectedVariant = { python: 0, java: 0 };
   setLeftTab("description");
+  applyContestModeVisibility();
   updateLeftSubmissionsBadge();
   updateTimerDisplay();
 
@@ -1981,15 +2184,23 @@ function populateStressRefSelector(refSubs) {
 }
 
 function populateReferenceSelector(refSubs) {
+  if (!elements.refSubmissionSelect) return;
+  const prevValue = elements.refSubmissionSelect.value;
   elements.refSubmissionSelect.innerHTML = '<option value="">My Workspace</option>';
 
   if (!refSubs || Object.keys(refSubs).length === 0) return;
 
-  const categories = [
-    { key: "accepted", label: "Accepted" },
-    { key: "wrong_answer", label: "Wrong Answer" },
-    { key: "time_limit_exceeded", label: "Time Limit Exceeded" },
-  ];
+  const isContest = state.timer.mode === "contest";
+  const categories = isContest
+    ? [
+        { key: "wrong_answer", label: "Wrong Answer" },
+        { key: "time_limit_exceeded", label: "Time Limit Exceeded" },
+      ]
+    : [
+        { key: "accepted", label: "Accepted" },
+        { key: "wrong_answer", label: "Wrong Answer" },
+        { key: "time_limit_exceeded", label: "Time Limit Exceeded" },
+      ];
 
   categories.forEach((cat) => {
     const files = refSubs[cat.key];
@@ -2005,6 +2216,10 @@ function populateReferenceSelector(refSubs) {
       elements.refSubmissionSelect.appendChild(optGroup);
     }
   });
+
+  if (prevValue && (!isContest || !prevValue.startsWith("accepted/"))) {
+    elements.refSubmissionSelect.value = prevValue;
+  }
 }
 
 function formatBreadcrumbPath(fullPath) {
@@ -3152,6 +3367,11 @@ async function generateNewMockQuiz() {
       }
     });
     saveSubmissionHistoryMap();
+    Object.keys(state.solutionsCache).forEach((k) => {
+      if (k.startsWith("mock-quiz/")) {
+        delete state.solutionsCache[k];
+      }
+    });
 
     state.activeContestId = contestMeta.contest_id;
     await loadContestsList();
@@ -3438,10 +3658,66 @@ function initEventListeners() {
     elements.btnCollapseSidebar.addEventListener("click", () => toggleSidebar(false));
   }
 
-  // Left Pane Tabs (Description vs Submissions & Output History)
+  // Left Pane Tabs (Description | Submissions | Solution) & Official Solution Actions
   if (elements.leftPaneTabs) {
     elements.leftPaneTabs.querySelectorAll(".left-tab").forEach((tab) => {
       tab.addEventListener("click", () => setLeftTab(tab.dataset.leftTab));
+    });
+  }
+  if (elements.btnReviewOriginContest) {
+    elements.btnReviewOriginContest.addEventListener("click", async () => {
+      const p = state.activeProblem;
+      if (!p || !p.source_contest_id) return;
+      await selectContest(p.source_contest_id, p.source_problem_id || null);
+    });
+  }
+  [elements.btnSolLangPython, elements.btnSolLangJava].forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const nextLang = btn.dataset.solLang === "java" ? "java" : "python";
+      state.solutionViewLang = nextLang;
+      const cacheKey = `${state.activeContestId}/${state.activeProblemId}`;
+      renderOfficialSolutionPanel(state.solutionsCache[cacheKey]);
+    });
+  });
+  if (elements.solVariantSelect) {
+    elements.solVariantSelect.addEventListener("change", (e) => {
+      const lang = state.solutionViewLang === "java" ? "java" : "python";
+      state.solutionSelectedVariant[lang] = Number(e.target.value || 0);
+      const cacheKey = `${state.activeContestId}/${state.activeProblemId}`;
+      renderOfficialSolutionPanel(state.solutionsCache[cacheKey]);
+    });
+  }
+  if (elements.btnCopyOfficialSolution) {
+    elements.btnCopyOfficialSolution.addEventListener("click", () => {
+      const cacheKey = `${state.activeContestId}/${state.activeProblemId}`;
+      const item = getCurrentOfficialSolutionItem(state.solutionsCache[cacheKey]);
+      if (!item || !item.code) return;
+      navigator.clipboard.writeText(item.code);
+      const lbl = elements.btnCopyOfficialSolution.querySelector("span");
+      if (lbl) {
+        lbl.textContent = "Copied!";
+        setTimeout(() => { lbl.textContent = "Copy"; }, 1400);
+      }
+    });
+  }
+  if (elements.btnLoadOfficialSolution) {
+    elements.btnLoadOfficialSolution.addEventListener("click", async () => {
+      const cacheKey = `${state.activeContestId}/${state.activeProblemId}`;
+      const item = getCurrentOfficialSolutionItem(state.solutionsCache[cacheKey]);
+      if (!item || !item.code) return;
+      if (!confirm(`Load official ${item.lang === "java" ? "Java" : "Python"} solution (${item.filename}) into your workspace? This will overwrite your current code file.`)) {
+        return;
+      }
+      if (item.lang !== state.activeLang) {
+        if (elements.langSelect) elements.langSelect.value = item.lang;
+        state.activeLang = item.lang;
+      }
+      state.activeRefPath = null;
+      if (elements.refSubmissionSelect) elements.refSubmissionSelect.value = "";
+      await loadActiveCode(true);
+      setEditorCode(item.code, state.activeLang);
+      await saveCodeToDisk();
     });
   }
   if (elements.btnClearSubHistory) {

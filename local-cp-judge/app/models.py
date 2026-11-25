@@ -65,6 +65,18 @@ class ProblemMeta(BaseModel):
         default_factory=dict,
         description="Catalog of reference submissions by category: 'accepted', 'wrong_answer', 'time_limit_exceeded'"
     )
+    source_contest_id: Optional[str] = Field(
+        default=None,
+        description="Original contest slug if this problem belongs to a mockup contest"
+    )
+    source_contest_title: Optional[str] = Field(
+        default=None,
+        description="Original contest display title if this problem belongs to a mockup contest"
+    )
+    source_problem_id: Optional[str] = Field(
+        default=None,
+        description="Original problem folder ID if this problem belongs to a mockup contest"
+    )
 
 
 class ContestMeta(BaseModel):
@@ -94,6 +106,27 @@ class CodeResponse(BaseModel):
     file_path: str = Field(description="Absolute path to the source file on disk")
     last_modified: float = Field(description="Last modified POSIX timestamp of the file")
     is_reference: bool = Field(default=False, description="True if this is a read-only reference submission")
+
+
+class OfficialSolutionItem(BaseModel):
+    """Official accepted solution entry for Practice Mode Solutions tab."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    lang: str = Field(description="Normalized language: 'python' or 'java'")
+    filename: str = Field(description="Solution filename under submissions/accepted/")
+    ref_path: str = Field(description="Relative reference path, e.g. 'accepted/Main.java'")
+    code: str = Field(description="Full solution source code")
+    is_primary: bool = Field(default=False, description="True if selected as default solution for this language")
+
+
+class ProblemSolutionsResponse(BaseModel):
+    """Catalog of official accepted Python and Java solutions for a problem."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    contest_id: str = Field(description="Contest identifier")
+    problem_id: str = Field(description="Problem identifier")
+    python: list[OfficialSolutionItem] = Field(default_factory=list, description="Accepted Python solutions")
+    java: list[OfficialSolutionItem] = Field(default_factory=list, description="Accepted Java solutions")
 
 
 class OpenExternalRequest(BaseModel):

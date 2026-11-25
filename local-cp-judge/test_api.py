@@ -63,6 +63,10 @@ def main() -> int:
         assert 'id="lang-select"' in home_text
         assert 'id="view-samples"' in home_text
         assert 'id="btn-toggle-pdf"' in home_text
+        assert 'id="btn-left-tab-solution"' in home_text
+        assert 'id="btn-mode-practice"' in home_text
+        assert 'id="btn-mode-contest"' in home_text
+        assert 'id="description-origin-header"' in home_text
 
         sc, _, sys_bytes = _get(base_url, "/api/system/status")
         assert sc == 200
@@ -106,6 +110,20 @@ def main() -> int:
                 java_sc, _, _ = _get(base_url, f"/api/problems/{cid}/{pid}/code?lang=java", headers=headers)
                 assert py_sc == 200 and java_sc == 200
 
+                if cid == "mock-quiz":
+                    assert p.get("source_contest_id"), f"mock-quiz/{pid} missing source_contest_id"
+                    assert p.get("source_contest_title"), f"mock-quiz/{pid} missing source_contest_title"
+                    assert p.get("source_problem_id"), f"mock-quiz/{pid} missing source_problem_id"
+                    assert "obsidian-origin-banner" in st_text, f"mock-quiz/{pid} missing origin banner in statement"
+
+                sol_sc, _, sol_bytes = _get(base_url, f"/api/problems/{cid}/{pid}/solutions")
+                assert sol_sc == 200, f"{cid}/{pid} solutions returned {sol_sc}"
+                sol_data = json.loads(sol_bytes.decode("utf-8"))
+                assert len(sol_data.get("python", [])) >= 1, f"{cid}/{pid} missing official Python solution"
+                assert len(sol_data.get("java", [])) >= 1, f"{cid}/{pid} missing official Java solution"
+                assert sol_data["python"][0]["code"].strip(), f"{cid}/{pid} empty Python solution"
+                assert sol_data["java"][0]["code"].strip(), f"{cid}/{pid} empty Java solution"
+
                 smp_sc, _, smp_bytes = _get(base_url, f"/api/problems/{cid}/{pid}/sample-tests", headers=headers)
                 assert smp_sc == 200
                 assert len(json.loads(smp_bytes.decode("utf-8"))) == p["sample_count"]
@@ -113,6 +131,7 @@ def main() -> int:
                 print(
                     f"  [{p['short_name']}] {p['name']}"
                     f" | Samples: {p['sample_count']} | Secrets: {p['secret_count']}"
+                    f" | Sol(Py/Java): {len(sol_data['python'])}/{len(sol_data['java'])}"
                     f" | Statement: {st_sc} ({content_type[:16]})"
                     f" | Code: {py_sc}/{java_sc}"
                 )

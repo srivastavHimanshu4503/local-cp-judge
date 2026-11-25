@@ -76,8 +76,19 @@
       </div>
     </div>
 
-    <!-- Right: Contest + Question Dual Timer + Upload + Toolchains -->
+    <!-- Right: Mode Switch + Contest/Question Dual Timer + Upload + Toolchains -->
     <div class="topbar-right">
+      <div id="mode-switch" class="mode-switch" role="group" aria-label="Workspace Mode">
+        <button type="button" id="btn-mode-practice" class="mode-switch-btn active" data-mode="practice" title="Practice Mode: Solution tab unlocked &amp; stopwatch counts up">
+          <i data-lucide="book-open"></i>
+          <span>Practice</span>
+        </button>
+        <button type="button" id="btn-mode-contest" class="mode-switch-btn" data-mode="contest" title="Contest Mode: Solution tab hidden &amp; 2h countdown">
+          <i data-lucide="trophy"></i>
+          <span>Contest</span>
+        </button>
+      </div>
+
       <div class="contest-timer dual-timer-pill" id="contest-timer">
         <button type="button" id="btn-timer-breakdown" class="timer-segment timer-segment-contest" title="Total Contest Time (Click for per-question breakdown &amp; resets)">
           <i data-lucide="clock" class="timer-icon"></i>
@@ -131,6 +142,10 @@
             <span>Submissions</span>
             <span id="left-sub-count" class="left-tab-count" style="display: none;">0</span>
           </button>
+          <button type="button" id="btn-left-tab-solution" class="view-tab left-tab" data-left-tab="solution">
+            <i data-lucide="lightbulb"></i>
+            <span>Solution</span>
+          </button>
         </div>
         <div class="statement-header-actions">
           <button id="btn-toggle-pdf" class="btn btn-xs btn-outline-subtle btn-view-pdf" style="display: none;" title="Switch between Dark Markdown and original PDF">
@@ -147,6 +162,16 @@
       </div>
 
       <div id="left-view-description" class="left-view-panel active">
+        <div id="description-origin-header" class="description-origin-header" style="display: none;">
+          <div class="origin-header-meta">
+            <span class="origin-badge">MOCK QUIZ</span>
+            <span id="origin-contest-label" class="origin-contest-label"></span>
+          </div>
+          <button type="button" id="btn-review-origin-contest" class="btn btn-xs btn-origin-jump" title="Open this question inside its original contest to review">
+            <i data-lucide="arrow-up-right"></i>
+            <span>Open Original</span>
+          </button>
+        </div>
         <div class="pdf-container">
           <iframe id="pdf-viewer" src="about:blank" title="Problem Statement Viewer"></iframe>
           <div id="pdf-fallback" class="empty-state" style="display: none;">
@@ -279,6 +304,44 @@
               </div>
               <pre id="sub-detail-code-text" class="sub-code-pre"></pre>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="left-view-solution" class="left-view-panel solution-panel">
+        <div id="solution-empty-state" class="empty-state" style="display: none;">
+          <i data-lucide="lightbulb" class="empty-icon"></i>
+          <p id="solution-empty-msg">No official solution available for this problem.</p>
+        </div>
+
+        <div id="solution-content-wrap" class="solution-content-wrap" style="display: none;">
+          <div class="solution-toolbar">
+            <div class="solution-toolbar-left">
+              <div class="solution-lang-pills" role="tablist" aria-label="Solution Language">
+                <button type="button" id="btn-sol-lang-python" class="sol-lang-btn active" data-sol-lang="python">Python 3</button>
+                <button type="button" id="btn-sol-lang-java" class="sol-lang-btn" data-sol-lang="java">Java</button>
+              </div>
+              <select id="sol-variant-select" class="select-compact select-sol-variant" title="Select accepted approach"></select>
+            </div>
+            <div class="solution-toolbar-actions">
+              <button type="button" id="btn-load-official-solution" class="btn btn-xs btn-outline" title="Load this solution into your workspace editor">
+                <i data-lucide="corner-up-left"></i>
+                <span>Load in Editor</span>
+              </button>
+              <button type="button" id="btn-copy-official-solution" class="btn btn-xs btn-outline-subtle" title="Copy solution code">
+                <i data-lucide="copy"></i>
+                <span>Copy</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="solution-file-bar">
+            <span id="solution-file-meta" class="solution-file-meta">submissions/accepted/solution.py</span>
+            <span class="solution-ac-pill">Accepted</span>
+          </div>
+
+          <div class="solution-code-scroll">
+            <pre id="solution-code-pre" class="solution-code-pre"></pre>
           </div>
         </div>
       </div>
