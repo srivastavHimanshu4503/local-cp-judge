@@ -63,6 +63,10 @@ const state = {
   isConsoleOpen: true,
   consoleHeight: 240,
   isSidebarOpen: true,
+  leftTab: "description",
+  submissionHistoryMap: {},
+  activeSubmissionId: null,
+  activeSubmissionEntry: null,
   timer: {
     mode: "practice", // "practice" or "contest"
     isRunning: false,
@@ -97,12 +101,65 @@ const elements = {
   btnTimerMode: document.getElementById("btn-timer-mode"),
   timerModeBadge: document.getElementById("timer-mode-badge"),
 
-  // Left Column (Statement)
+  // Left Column (Statement & Submissions)
   panePdf: document.getElementById("pane-pdf"),
+  leftPaneTabs: document.getElementById("left-pane-tabs"),
+  leftSubCount: document.getElementById("left-sub-count"),
+  leftViewDescription: document.getElementById("left-view-description"),
+  leftViewSubmissions: document.getElementById("left-view-submissions"),
   pdfViewer: document.getElementById("pdf-viewer"),
   pdfFallback: document.getElementById("pdf-fallback"),
   btnOpenPdfExt: document.getElementById("btn-open-pdf-ext"),
   resizerCols: document.getElementById("resizer-cols"),
+
+  // Left Submissions & Output History
+  subEmptyState: document.getElementById("sub-empty-state"),
+  subContentWrap: document.getElementById("sub-content-wrap"),
+  btnClearSubHistory: document.getElementById("btn-clear-sub-history"),
+  subHistoryList: document.getElementById("sub-history-list"),
+  subDetailView: document.getElementById("sub-detail-view"),
+  subDetailBanner: document.getElementById("sub-detail-banner"),
+  subDetailBannerIcon: document.getElementById("sub-detail-banner-icon"),
+  subDetailBannerTitle: document.getElementById("sub-detail-banner-title"),
+  subDetailBannerSubtitle: document.getElementById("sub-detail-banner-subtitle"),
+  subDetailVerdict: document.getElementById("sub-detail-verdict"),
+  subDetailCounter: document.getElementById("sub-detail-counter"),
+  subDetailMetrics: document.getElementById("sub-detail-metrics"),
+  subDetailRuntime: document.getElementById("sub-detail-runtime"),
+  subDetailMemory: document.getElementById("sub-detail-memory"),
+  subDetailCeBox: document.getElementById("sub-detail-ce-box"),
+  subDetailCeText: document.getElementById("sub-detail-ce-text"),
+  btnCopySubCe: document.getElementById("btn-copy-sub-ce"),
+  subDetailInspector: document.getElementById("sub-detail-inspector"),
+  subDetailPillsRow: document.getElementById("sub-detail-pills-row"),
+  subDetailPillsLabel: document.getElementById("sub-detail-pills-label"),
+  subDetailPills: document.getElementById("sub-detail-pills"),
+  subDetailStderrGroup: document.getElementById("sub-detail-stderr-group"),
+  subDetailStderrLabel: document.getElementById("sub-detail-stderr-label"),
+  subDetailStderrText: document.getElementById("sub-detail-stderr-text"),
+  btnCopySubStderr: document.getElementById("btn-copy-sub-stderr"),
+  subDetailDiffGroup: document.getElementById("sub-detail-diff-group"),
+  subDetailDiffText: document.getElementById("sub-detail-diff-text"),
+  subDetailInputGroup: document.getElementById("sub-detail-input-group"),
+  subDetailInputText: document.getElementById("sub-detail-input-text"),
+  btnCopySubInput: document.getElementById("btn-copy-sub-input"),
+  subDetailOutputGroup: document.getElementById("sub-detail-output-group"),
+  subDetailOutputLabel: document.getElementById("sub-detail-output-label"),
+  subDetailOutputText: document.getElementById("sub-detail-output-text"),
+  btnCopySubOutput: document.getElementById("btn-copy-sub-output"),
+  subDetailExpectedGroup: document.getElementById("sub-detail-expected-group"),
+  subDetailExpectedText: document.getElementById("sub-detail-expected-text"),
+  btnCopySubExpected: document.getElementById("btn-copy-sub-expected"),
+  subDetailAllWrapper: document.getElementById("sub-detail-all-wrapper"),
+  subDetailAllList: document.getElementById("sub-detail-all-list"),
+  subDetailCodeGroup: document.getElementById("sub-detail-code-group"),
+  subDetailCodeLabel: document.getElementById("sub-detail-code-label"),
+  subDetailCodeText: document.getElementById("sub-detail-code-text"),
+  btnLoadSubCode: document.getElementById("btn-load-sub-code"),
+  btnCopySubCode: document.getElementById("btn-copy-sub-code"),
+  btnOpenCeLeft: document.getElementById("btn-open-ce-left"),
+  btnOpenDiagLeft: document.getElementById("btn-open-diag-left"),
+  btnOpenCustomLeft: document.getElementById("btn-open-custom-left"),
 
   // Right Column (Workspace)
   workspaceRight: document.getElementById("workspace-right"),
@@ -618,6 +675,401 @@ function toggleSidebar(forceOpen = null) {
 }
 
 // =====================================================================
+// LeetCode-Style Left Pane Tabs (Description | Submissions & Output History)
+// =====================================================================
+
+function getSubmissionStorageKey() {
+  return `localcp_sub_history_${SESSION_ID}`;
+}
+
+function loadSubmissionHistoryMap() {
+  try {
+    const raw = localStorage.getItem(getSubmissionStorageKey());
+    state.submissionHistoryMap = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    state.submissionHistoryMap = {};
+  }
+}
+
+function saveSubmissionHistoryMap() {
+  const key = getSubmissionStorageKey();
+  try {
+    localStorage.setItem(key, JSON.stringify(state.submissionHistoryMap));
+  } catch (e) {
+    // Trim code snapshots from older entries if localStorage quota is exceeded
+    try {
+      Object.values(state.submissionHistoryMap).forEach((list) => {
+        if (Array.isArray(list)) {
+          list.slice(3).forEach((item) => {
+            item.code = "";
+          });
+        }
+      });
+      localStorage.setItem(key, JSON.stringify(state.submissionHistoryMap));
+    } catch (_) {}
+  }
+}
+
+function getProblemHistoryKey(contestId = state.activeContestId, problemId = state.activeProblemId) {
+  if (!contestId || !problemId) return null;
+  return `${contestId}/${problemId}`;
+}
+
+function getProblemHistory(contestId = state.activeContestId, problemId = state.activeProblemId) {
+  const k = getProblemHistoryKey(contestId, problemId);
+  if (!k) return [];
+  const list = state.submissionHistoryMap[k];
+  return Array.isArray(list) ? list : [];
+}
+
+function updateLeftSubmissionsBadge() {
+  if (!elements.leftSubCount) return;
+  const count = getProblemHistory().length;
+  elements.leftSubCount.textContent = String(count);
+  elements.leftSubCount.style.display = count > 0 ? "inline-flex" : "none";
+}
+
+function formatRunClock(ts) {
+  try {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch (e) {
+    return "";
+  }
+}
+
+function verdictFullName(verdict) {
+  const v = (verdict || "").toUpperCase();
+  if (v === "AC") return "Accepted";
+  if (v === "WA") return "Wrong Answer";
+  if (v === "TLE") return "Time Limit Exceeded";
+  if (v === "MLE") return "Memory Limit Exceeded";
+  if (v === "RE") return "Runtime Error";
+  if (v === "CE") return "Compile Error";
+  return v || "Unknown";
+}
+
+function setLeftTab(tabName) {
+  const target = tabName === "submissions" ? "submissions" : "description";
+  state.leftTab = target;
+  if (elements.leftPaneTabs) {
+    elements.leftPaneTabs.querySelectorAll(".left-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.leftTab === target);
+    });
+  }
+  if (elements.leftViewDescription) {
+    elements.leftViewDescription.classList.toggle("active", target === "description");
+  }
+  if (elements.leftViewSubmissions) {
+    elements.leftViewSubmissions.classList.toggle("active", target === "submissions");
+  }
+  if (target === "submissions") {
+    renderSubmissionsHistory();
+  }
+}
+
+function openLeftSubmissions(entryId = null) {
+  if (window.innerWidth <= 1024) {
+    setMobilePane("statement");
+  } else if (!state.isSidebarOpen) {
+    toggleSidebar(true);
+  }
+  if (entryId) {
+    state.activeSubmissionId = entryId;
+  }
+  setLeftTab("submissions");
+}
+
+function recordRunHistory({
+  contestId = state.activeContestId,
+  problemId = state.activeProblemId,
+  kind = "Run",
+  suite = "sample",
+  lang = state.activeLang,
+  verdict = "WA",
+  passed = 0,
+  total = 0,
+  maxTimeMs = 0,
+  maxMemoryMb = 0,
+  compileError = "",
+  results = [],
+  customRun = null,
+  code = "",
+}) {
+  const pKey = getProblemHistoryKey(contestId, problemId);
+  if (!pKey) return null;
+
+  const entry = {
+    id: `run_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    timestamp: Date.now(),
+    kind,
+    suite,
+    lang,
+    verdict,
+    passed,
+    total,
+    maxTimeMs: Number(maxTimeMs || 0),
+    maxMemoryMb: Number(maxMemoryMb || 0),
+    compileError: compileError || "",
+    results: Array.isArray(results) ? results : [],
+    customRun: customRun || null,
+    code: code || "",
+  };
+
+  const prev = Array.isArray(state.submissionHistoryMap[pKey]) ? state.submissionHistoryMap[pKey] : [];
+  state.submissionHistoryMap[pKey] = [entry, ...prev].slice(0, 15);
+  state.activeSubmissionId = entry.id;
+  saveSubmissionHistoryMap();
+
+  if (contestId === state.activeContestId && problemId === state.activeProblemId) {
+    updateLeftSubmissionsBadge();
+    if (state.leftTab === "submissions") {
+      renderSubmissionsHistory();
+    }
+  }
+  return entry;
+}
+
+function renderSubmissionsHistory() {
+  const history = getProblemHistory();
+  updateLeftSubmissionsBadge();
+
+  if (history.length === 0) {
+    if (elements.subEmptyState) elements.subEmptyState.style.display = "flex";
+    if (elements.subContentWrap) elements.subContentWrap.style.display = "none";
+    refreshIcons();
+    return;
+  }
+
+  if (elements.subEmptyState) elements.subEmptyState.style.display = "none";
+  if (elements.subContentWrap) elements.subContentWrap.style.display = "flex";
+
+  if (!state.activeSubmissionId || !history.some((e) => e.id === state.activeSubmissionId)) {
+    state.activeSubmissionId = history[0].id;
+  }
+
+  if (elements.subHistoryList) {
+    elements.subHistoryList.innerHTML = "";
+    history.forEach((entry) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `sub-history-item ${entry.id === state.activeSubmissionId ? "active" : ""}`;
+      const langLabel = entry.lang === "java" ? "Java" : "Python";
+      const countText = entry.suite === "custom_stdin"
+        ? "Stdin"
+        : (entry.verdict === "CE" ? "CE" : `${entry.passed}/${entry.total}`);
+      btn.innerHTML = `
+        <div class="sub-hist-left">
+          <span class="verdict-badge ${getVerdictClass(entry.verdict)}">${escapeHtml(entry.verdict)}</span>
+          <span class="sub-hist-kind">${escapeHtml(entry.kind)}</span>
+          <span class="sub-hist-lang">${escapeHtml(langLabel)}</span>
+        </div>
+        <div class="sub-hist-right">
+          <span>${escapeHtml(countText)}</span>
+          <span>${entry.maxTimeMs.toFixed(0)} ms</span>
+          <span>${escapeHtml(formatRunClock(entry.timestamp))}</span>
+        </div>
+      `;
+      btn.addEventListener("click", () => {
+        state.activeSubmissionId = entry.id;
+        renderSubmissionsHistory();
+      });
+      elements.subHistoryList.appendChild(btn);
+    });
+  }
+
+  const activeEntry = history.find((e) => e.id === state.activeSubmissionId) || history[0];
+  selectSubmissionEntry(activeEntry);
+}
+
+function selectSubmissionEntry(entry) {
+  if (!entry || !elements.subDetailView) return;
+  state.activeSubmissionEntry = entry;
+  elements.subDetailView.style.display = "flex";
+
+  const verdictName = verdictFullName(entry.verdict);
+  const langLabel = entry.lang === "java" ? "Java" : "Python";
+
+  if (elements.subDetailBanner) {
+    const isAc = entry.verdict === "AC";
+    elements.subDetailBanner.className = `lc-verdict-banner-card ${isAc ? "banner-solved" : "banner-failed"}`;
+    if (elements.subDetailBannerIcon) {
+      elements.subDetailBannerIcon.setAttribute("data-lucide", isAc ? "check-circle-2" : "alert-circle");
+    }
+    if (elements.subDetailBannerTitle) {
+      elements.subDetailBannerTitle.textContent = `${entry.kind}: ${verdictName}`;
+    }
+    if (elements.subDetailBannerSubtitle) {
+      elements.subDetailBannerSubtitle.textContent = `${langLabel} • ${formatRunClock(entry.timestamp)}`;
+    }
+  }
+
+  if (elements.subDetailVerdict) {
+    elements.subDetailVerdict.textContent = verdictName;
+    elements.subDetailVerdict.className = `lc-verdict-title ${getVerdictClass(entry.verdict)}`;
+  }
+
+  if (elements.subDetailCounter) {
+    if (entry.suite === "custom_stdin") {
+      elements.subDetailCounter.textContent = "Custom Input Execution";
+    } else if (entry.verdict === "CE") {
+      elements.subDetailCounter.textContent = "Build failed";
+    } else {
+      elements.subDetailCounter.textContent = `${entry.passed} / ${entry.total} testcases passed`;
+    }
+  }
+
+  if (elements.subDetailMetrics) {
+    elements.subDetailMetrics.style.display = entry.verdict === "CE" ? "none" : "flex";
+    if (elements.subDetailRuntime) elements.subDetailRuntime.textContent = `${entry.maxTimeMs.toFixed(1)} ms`;
+    if (elements.subDetailMemory) elements.subDetailMemory.textContent = `${entry.maxMemoryMb.toFixed(1)} MB`;
+  }
+
+  // Compile error view
+  if (entry.compileError) {
+    if (elements.subDetailCeBox) elements.subDetailCeBox.style.display = "flex";
+    if (elements.subDetailCeText) elements.subDetailCeText.textContent = entry.compileError;
+    if (elements.subDetailInspector) elements.subDetailInspector.style.display = "none";
+  } else if (entry.customRun) {
+    if (elements.subDetailCeBox) elements.subDetailCeBox.style.display = "none";
+    if (elements.subDetailInspector) elements.subDetailInspector.style.display = "flex";
+    if (elements.subDetailPillsRow) elements.subDetailPillsRow.style.display = "none";
+    if (elements.subDetailAllWrapper) elements.subDetailAllWrapper.style.display = "none";
+    if (elements.subDetailExpectedGroup) elements.subDetailExpectedGroup.style.display = "none";
+    if (elements.subDetailDiffGroup) elements.subDetailDiffGroup.style.display = "none";
+
+    if (elements.subDetailStderrGroup && elements.subDetailStderrText) {
+      if (entry.customRun.stderr) {
+        elements.subDetailStderrGroup.style.display = "flex";
+        elements.subDetailStderrText.textContent = entry.customRun.stderr;
+      } else {
+        elements.subDetailStderrGroup.style.display = "none";
+      }
+    }
+    if (elements.subDetailInputText) elements.subDetailInputText.textContent = entry.customRun.input || "(empty stdin)";
+    if (elements.subDetailOutputLabel) elements.subDetailOutputLabel.textContent = `Standard Output (${entry.customRun.verdict})`;
+    if (elements.subDetailOutputText) elements.subDetailOutputText.textContent = entry.customRun.stdout || "(empty stdout)";
+  } else {
+    if (elements.subDetailCeBox) elements.subDetailCeBox.style.display = "none";
+    const results = entry.results || [];
+    if (elements.subDetailInspector) {
+      elements.subDetailInspector.style.display = results.length > 0 ? "flex" : "none";
+    }
+    const failed = results.filter((t) => t.verdict !== "AC");
+    const displayCases = failed.length > 0 ? failed : results;
+
+    if (elements.subDetailPillsRow) {
+      elements.subDetailPillsRow.style.display = displayCases.length > 0 ? "flex" : "none";
+    }
+    if (elements.subDetailPillsLabel) {
+      elements.subDetailPillsLabel.textContent = failed.length > 0 ? "Failed Testcases:" : "Executed Testcases:";
+    }
+    if (elements.subDetailPills) {
+      elements.subDetailPills.innerHTML = "";
+      displayCases.forEach((tc, idx) => {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        const isFail = tc.verdict !== "AC";
+        pill.className = `lc-case-pill ${isFail ? "failed" : "passed"} ${idx === 0 ? "active" : ""}`;
+        pill.textContent = isFail ? `${tc.test_name} (${tc.verdict})` : tc.test_name;
+        pill.addEventListener("click", () => {
+          elements.subDetailPills.querySelectorAll(".lc-case-pill").forEach((p) => p.classList.remove("active"));
+          pill.classList.add("active");
+          selectSubmissionTestcase(tc);
+        });
+        elements.subDetailPills.appendChild(pill);
+      });
+    }
+
+    if (elements.subDetailAllWrapper && elements.subDetailAllList) {
+      elements.subDetailAllWrapper.style.display = results.length > 1 ? "block" : "none";
+      elements.subDetailAllList.innerHTML = "";
+      results.forEach((tc) => {
+        const row = document.createElement("div");
+        row.className = "lc-test-row";
+        row.innerHTML = `
+          <div class="lc-test-row-left">
+            <span class="verdict-badge ${getVerdictClass(tc.verdict)}">${escapeHtml(tc.verdict)}</span>
+            <span>${escapeHtml(tc.test_name)}</span>
+          </div>
+          <div class="lc-test-row-right">
+            <span>${Number(tc.time_ms || 0).toFixed(1)} ms</span>
+            <span>${Number(tc.memory_mb || 0).toFixed(1)} MB</span>
+          </div>
+        `;
+        row.addEventListener("click", () => {
+          elements.subDetailAllList.querySelectorAll(".lc-test-row").forEach((r) => r.classList.remove("active"));
+          row.classList.add("active");
+          selectSubmissionTestcase(tc);
+        });
+        elements.subDetailAllList.appendChild(row);
+      });
+    }
+
+    if (displayCases.length > 0) {
+      selectSubmissionTestcase(displayCases[0]);
+    }
+  }
+
+  // Submitted code snapshot
+  if (elements.subDetailCodeGroup && elements.subDetailCodeText) {
+    if (entry.code) {
+      elements.subDetailCodeGroup.style.display = "flex";
+      elements.subDetailCodeLabel.textContent = `Submitted Code (${langLabel})`;
+      elements.subDetailCodeText.textContent = entry.code;
+    } else {
+      elements.subDetailCodeGroup.style.display = "none";
+    }
+  }
+
+  refreshIcons();
+}
+
+function selectSubmissionTestcase(tc) {
+  if (!tc) return;
+  const isFailed = tc.verdict !== "AC";
+
+  if (elements.subDetailStderrGroup && elements.subDetailStderrText) {
+    if (tc.stderr_preview) {
+      elements.subDetailStderrGroup.style.display = "flex";
+      if (elements.subDetailStderrLabel) {
+        elements.subDetailStderrLabel.textContent = `Full Standard Error / Traceback (${tc.test_name})`;
+      }
+      elements.subDetailStderrText.textContent = tc.stderr_preview;
+    } else {
+      elements.subDetailStderrGroup.style.display = "none";
+    }
+  }
+
+  if (elements.subDetailDiffGroup && elements.subDetailDiffText) {
+    if (isFailed && tc.diff_message) {
+      elements.subDetailDiffGroup.style.display = "flex";
+      elements.subDetailDiffText.textContent = tc.diff_message;
+    } else {
+      elements.subDetailDiffGroup.style.display = "none";
+    }
+  }
+
+  if (elements.subDetailInputText) {
+    elements.subDetailInputText.textContent = tc.input_preview || "(empty stdin)";
+  }
+  if (elements.subDetailOutputLabel) {
+    elements.subDetailOutputLabel.textContent = isFailed ? `Output (${tc.verdict})` : "Output";
+  }
+  if (elements.subDetailOutputText) {
+    elements.subDetailOutputText.textContent = tc.actual_preview || "(empty stdout)";
+  }
+  if (elements.subDetailExpectedGroup && elements.subDetailExpectedText) {
+    if (tc.expected_preview !== undefined && tc.expected_preview !== null) {
+      elements.subDetailExpectedGroup.style.display = "flex";
+      elements.subDetailExpectedText.textContent = tc.expected_preview || "(empty expected)";
+    } else {
+      elements.subDetailExpectedGroup.style.display = "none";
+    }
+  }
+}
+
+// =====================================================================
 // LeetCode-Style Console Toggle & Dual Resizers
 // =====================================================================
 
@@ -993,6 +1445,11 @@ async function selectProblem(problemId) {
   // Reset judge cards and results
   clearJudgeView();
 
+  // Default Left Panel to Problem Description when switching problems and refresh Submissions count
+  state.activeSubmissionId = null;
+  setLeftTab("description");
+  updateLeftSubmissionsBadge();
+
   // Load code from disk
   await loadActiveCode();
 }
@@ -1180,6 +1637,12 @@ async function startJudging(suite) {
   state.testResults = [];
   clearJudgeView();
 
+  const runContestId = state.activeContestId;
+  const runProblemId = state.activeProblemId;
+  const runLang = state.activeLang;
+  const runCodeSnapshot = getEditorCode();
+  const runKind = suite === "all" ? "Submission" : (suite === "custom" ? "My Tests" : "Samples");
+
   elements.btnRunSamples.style.display = "none";
   elements.btnJudgeAll.style.display = "none";
   elements.btnStopJudge.style.display = "inline-flex";
@@ -1207,6 +1670,21 @@ async function startJudging(suite) {
     const data = JSON.parse(e.data);
     elements.progressStageText.textContent = "Compilation Error";
     renderCompileErrorResult(data.error);
+    const recorded = recordRunHistory({
+      contestId: runContestId,
+      problemId: runProblemId,
+      kind: runKind,
+      suite,
+      lang: runLang,
+      verdict: "CE",
+      passed: 0,
+      total: 0,
+      compileError: data.error,
+      code: runCodeSnapshot,
+    });
+    if (suite === "all" && recorded) {
+      openLeftSubmissions(recorded.id);
+    }
     stopJudging();
   });
 
@@ -1243,6 +1721,23 @@ async function startJudging(suite) {
     elements.progressFill.style.width = "100%";
     elements.progressStageText.textContent = `Completed — ${summary.passed} of ${summary.total} Passed`;
     renderLeetCodeResult(summary);
+    const recorded = recordRunHistory({
+      contestId: runContestId,
+      problemId: runProblemId,
+      kind: runKind,
+      suite: summary.suite || suite,
+      lang: summary.lang || runLang,
+      verdict: summary.overall_verdict,
+      passed: summary.passed,
+      total: summary.total,
+      maxTimeMs: summary.max_time_ms,
+      maxMemoryMb: summary.max_memory_mb,
+      results: state.testResults.slice(),
+      code: runCodeSnapshot,
+    });
+    if ((summary.suite || suite) === "all" && recorded) {
+      openLeftSubmissions(recorded.id);
+    }
     stopJudging();
   });
 
@@ -1803,14 +2298,18 @@ async function runCustomInput() {
   }
 
   const customInputText = elements.customStdinInput.value;
+  const runContestId = state.activeContestId;
+  const runProblemId = state.activeProblemId;
+  const runLang = state.activeLang;
+  const runCodeSnapshot = getEditorCode();
   elements.btnRunCustom.disabled = true;
   elements.customOutputSection.style.display = "none";
 
   try {
     const payload = {
-      contest_id: state.activeContestId,
-      problem_id: state.activeProblemId,
-      lang: state.activeLang,
+      contest_id: runContestId,
+      problem_id: runProblemId,
+      lang: runLang,
       custom_input: customInputText,
       ref_submission: state.activeRefPath,
     };
@@ -1838,6 +2337,26 @@ async function runCustomInput() {
     } else {
       elements.customStderrBox.style.display = "none";
     }
+
+    recordRunHistory({
+      contestId: runContestId,
+      problemId: runProblemId,
+      kind: "Custom Run",
+      suite: "custom_stdin",
+      lang: runLang,
+      verdict: data.verdict,
+      passed: data.verdict === "AC" ? 1 : 0,
+      total: 1,
+      maxTimeMs: data.time_ms,
+      maxMemoryMb: data.memory_mb,
+      customRun: {
+        input: customInputText,
+        stdout: data.stdout_preview || "",
+        stderr: data.stderr_preview || "",
+        verdict: data.verdict,
+      },
+      code: runCodeSnapshot,
+    });
   } catch (err) {
     alert(`Error running custom input: ${err.message}`);
   } finally {
@@ -2124,6 +2643,80 @@ function initEventListeners() {
     elements.btnCollapseSidebar.addEventListener("click", () => toggleSidebar(false));
   }
 
+  // Left Pane Tabs (Description vs Submissions & Output History)
+  if (elements.leftPaneTabs) {
+    elements.leftPaneTabs.querySelectorAll(".left-tab").forEach((tab) => {
+      tab.addEventListener("click", () => setLeftTab(tab.dataset.leftTab));
+    });
+  }
+  if (elements.btnClearSubHistory) {
+    elements.btnClearSubHistory.addEventListener("click", () => {
+      const pKey = getProblemHistoryKey();
+      if (!pKey) return;
+      delete state.submissionHistoryMap[pKey];
+      state.activeSubmissionId = null;
+      state.activeSubmissionEntry = null;
+      saveSubmissionHistoryMap();
+      renderSubmissionsHistory();
+    });
+  }
+  if (elements.btnOpenCeLeft) {
+    elements.btnOpenCeLeft.addEventListener("click", () => openLeftSubmissions());
+  }
+  if (elements.btnOpenDiagLeft) {
+    elements.btnOpenDiagLeft.addEventListener("click", () => openLeftSubmissions());
+  }
+  if (elements.btnOpenCustomLeft) {
+    elements.btnOpenCustomLeft.addEventListener("click", () => openLeftSubmissions());
+  }
+  if (elements.btnCopySubCe) {
+    elements.btnCopySubCe.addEventListener("click", () => {
+      navigator.clipboard.writeText(elements.subDetailCeText ? elements.subDetailCeText.textContent : "");
+    });
+  }
+  if (elements.btnCopySubStderr) {
+    elements.btnCopySubStderr.addEventListener("click", () => {
+      navigator.clipboard.writeText(elements.subDetailStderrText ? elements.subDetailStderrText.textContent : "");
+    });
+  }
+  if (elements.btnCopySubInput) {
+    elements.btnCopySubInput.addEventListener("click", () => {
+      navigator.clipboard.writeText(elements.subDetailInputText ? elements.subDetailInputText.textContent : "");
+    });
+  }
+  if (elements.btnCopySubOutput) {
+    elements.btnCopySubOutput.addEventListener("click", () => {
+      navigator.clipboard.writeText(elements.subDetailOutputText ? elements.subDetailOutputText.textContent : "");
+    });
+  }
+  if (elements.btnCopySubExpected) {
+    elements.btnCopySubExpected.addEventListener("click", () => {
+      navigator.clipboard.writeText(elements.subDetailExpectedText ? elements.subDetailExpectedText.textContent : "");
+    });
+  }
+  if (elements.btnCopySubCode) {
+    elements.btnCopySubCode.addEventListener("click", () => {
+      navigator.clipboard.writeText(elements.subDetailCodeText ? elements.subDetailCodeText.textContent : "");
+    });
+  }
+  if (elements.btnLoadSubCode) {
+    elements.btnLoadSubCode.addEventListener("click", async () => {
+      const entry = state.activeSubmissionEntry;
+      if (!entry || !entry.code) return;
+      if (entry.lang && entry.lang !== state.activeLang) {
+        elements.langTabs.querySelectorAll(".lang-tab").forEach((t) => {
+          t.classList.toggle("active", t.dataset.lang === entry.lang);
+        });
+        state.activeLang = entry.lang;
+      }
+      state.activeRefPath = null;
+      if (elements.refSubmissionSelect) elements.refSubmissionSelect.value = "";
+      await loadActiveCode(true);
+      setEditorCode(entry.code, state.activeLang);
+      await saveCodeToDisk();
+    });
+  }
+
   // View tabs (Test Verdicts vs Custom Input vs Stress Tester)
   elements.viewTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -2385,6 +2978,7 @@ function initMobileSwitcher() {
 // =====================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
+  loadSubmissionHistoryMap();
   initResizers();
   initTimer();
   initMobileSwitcher();

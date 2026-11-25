@@ -81,21 +81,164 @@
 
   <!-- Main Obsidian Split Workspace -->
   <main class="workspace-layout">
-    <!-- Left Pane: Problem Statement Viewer -->
+    <!-- Left Pane: Problem Description & Submission History -->
     <section id="pane-pdf" class="pane pane-pdf pane-statement">
-      <div class="statement-floating-actions">
-        <button id="btn-open-pdf-ext" class="btn-icon btn-subtle-float" title="Open Statement in New Tab">
-          <i data-lucide="external-link"></i>
-        </button>
-        <button id="btn-collapse-sidebar" class="btn-icon btn-subtle-float" title="Hide Statement (Ctrl+B)">
-          <i data-lucide="panel-left-close"></i>
-        </button>
+      <div class="statement-header">
+        <div class="console-tabs left-pane-tabs" id="left-pane-tabs" role="tablist">
+          <button type="button" class="view-tab left-tab active" data-left-tab="description">
+            <i data-lucide="file-text"></i>
+            <span>Description</span>
+          </button>
+          <button type="button" class="view-tab left-tab" data-left-tab="submissions">
+            <i data-lucide="history"></i>
+            <span>Submissions</span>
+            <span id="left-sub-count" class="left-tab-count" style="display: none;">0</span>
+          </button>
+        </div>
+        <div class="statement-header-actions">
+          <button id="btn-open-pdf-ext" class="btn-icon btn-tiny" title="Open Statement in New Tab">
+            <i data-lucide="external-link"></i>
+          </button>
+          <button id="btn-collapse-sidebar" class="btn-icon btn-tiny" title="Hide Left Panel (Ctrl+B)">
+            <i data-lucide="panel-left-close"></i>
+          </button>
+        </div>
       </div>
-      <div class="pdf-container">
-        <iframe id="pdf-viewer" src="about:blank" title="Problem Statement Viewer"></iframe>
-        <div id="pdf-fallback" class="empty-state" style="display: none;">
-          <i data-lucide="file-text" class="empty-icon"></i>
-          <p>No problem statement available for this problem.</p>
+
+      <div id="left-view-description" class="left-view-panel active">
+        <div class="pdf-container">
+          <iframe id="pdf-viewer" src="about:blank" title="Problem Statement Viewer"></iframe>
+          <div id="pdf-fallback" class="empty-state" style="display: none;">
+            <i data-lucide="file-text" class="empty-icon"></i>
+            <p>No problem statement available for this problem.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="left-view-submissions" class="left-view-panel submissions-panel">
+        <div id="sub-empty-state" class="empty-state">
+          <i data-lucide="history" class="empty-icon"></i>
+          <p>No submissions or test runs recorded yet for this problem.</p>
+          <span class="sub-empty-hint">Run Samples (<code>Ctrl+'</code>) or Judge All (<code>Ctrl+Enter</code>) to inspect full verdicts, outputs, and error tracebacks here.</span>
+        </div>
+
+        <div id="sub-content-wrap" class="sub-content-wrap" style="display: none;">
+          <div class="sub-history-section">
+            <div class="sub-section-header">
+              <span class="sub-section-title">Run &amp; Submission History</span>
+              <button id="btn-clear-sub-history" class="btn btn-xs btn-outline-subtle" title="Clear history for this problem">Clear</button>
+            </div>
+            <div id="sub-history-list" class="sub-history-list"></div>
+          </div>
+
+          <div id="sub-detail-view" class="sub-detail-view" style="display: none;">
+            <div id="sub-detail-banner" class="lc-verdict-banner-card">
+              <div class="verdict-banner-icon-box">
+                <i data-lucide="check-circle-2" id="sub-detail-banner-icon"></i>
+              </div>
+              <div class="verdict-banner-text-box">
+                <div id="sub-detail-banner-title" class="verdict-banner-title">Accepted</div>
+                <div id="sub-detail-banner-subtitle" class="verdict-banner-subtitle"></div>
+              </div>
+            </div>
+
+            <div class="lc-verdict-header">
+              <div class="lc-verdict-title-row">
+                <h2 id="sub-detail-verdict" class="lc-verdict-title">AC</h2>
+                <span id="sub-detail-counter" class="lc-passed-counter"></span>
+              </div>
+              <div id="sub-detail-metrics" class="lc-metrics-row">
+                <span class="lc-metric">Runtime: <strong id="sub-detail-runtime">0.0 ms</strong></span>
+                <span class="lc-metric-sep">&bull;</span>
+                <span class="lc-metric">Memory: <strong id="sub-detail-memory">0.0 MB</strong></span>
+              </div>
+            </div>
+
+            <div id="sub-detail-ce-box" class="lc-compile-error-box" style="display: none;">
+              <div class="lc-io-header">
+                <span class="lc-io-label error-title">Compiler / Diagnostics</span>
+                <button id="btn-copy-sub-ce" class="btn-copy-io" title="Copy diagnostics">
+                  <i data-lucide="copy"></i>
+                </button>
+              </div>
+              <pre id="sub-detail-ce-text" class="sub-error-pre"></pre>
+            </div>
+
+            <div id="sub-detail-inspector" class="lc-testcase-inspector" style="display: none;">
+              <div id="sub-detail-pills-row" class="lc-tabs-row">
+                <span class="lc-tabs-label" id="sub-detail-pills-label">Testcases:</span>
+                <div id="sub-detail-pills" class="lc-case-pills"></div>
+              </div>
+
+              <div id="sub-detail-stderr-group" class="lc-io-group" style="display: none;">
+                <div class="lc-io-header">
+                  <span class="lc-io-label error-title" id="sub-detail-stderr-label">Full Standard Error / Traceback</span>
+                  <button id="btn-copy-sub-stderr" class="btn-copy-io" title="Copy error output">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+                <pre id="sub-detail-stderr-text" class="sub-error-pre"></pre>
+              </div>
+
+              <div id="sub-detail-diff-group" class="lc-io-group" style="display: none;">
+                <div class="lc-io-header">
+                  <span class="lc-io-label error-title">Difference Diagnostics</span>
+                </div>
+                <div id="sub-detail-diff-text" class="lc-diff-banner"></div>
+              </div>
+
+              <div id="sub-detail-input-group" class="lc-io-group">
+                <div class="lc-io-header">
+                  <span class="lc-io-label">Input</span>
+                  <button id="btn-copy-sub-input" class="btn-copy-io" title="Copy input">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+                <pre id="sub-detail-input-text" class="sub-io-pre"></pre>
+              </div>
+
+              <div id="sub-detail-output-group" class="lc-io-group">
+                <div class="lc-io-header">
+                  <span class="lc-io-label" id="sub-detail-output-label">Output</span>
+                  <button id="btn-copy-sub-output" class="btn-copy-io" title="Copy output">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+                <pre id="sub-detail-output-text" class="sub-io-pre"></pre>
+              </div>
+
+              <div id="sub-detail-expected-group" class="lc-io-group" style="display: none;">
+                <div class="lc-io-header">
+                  <span class="lc-io-label">Expected</span>
+                  <button id="btn-copy-sub-expected" class="btn-copy-io" title="Copy expected">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+                <pre id="sub-detail-expected-text" class="sub-io-pre"></pre>
+              </div>
+
+              <div id="sub-detail-all-wrapper" class="lc-all-tests-wrapper" style="display: none;">
+                <div class="sub-section-title" style="margin-bottom: 6px;">All Executed Testcases</div>
+                <div id="sub-detail-all-list" class="sub-all-tests-list"></div>
+              </div>
+            </div>
+
+            <div id="sub-detail-code-group" class="lc-io-group" style="display: none;">
+              <div class="lc-io-header">
+                <span class="lc-io-label" id="sub-detail-code-label">Submitted Code</span>
+                <div class="lc-io-actions">
+                  <button id="btn-load-sub-code" class="btn btn-xs btn-outline-subtle" title="Load this snapshot into the editor">
+                    <i data-lucide="corner-up-left"></i>
+                    <span>Load in Editor</span>
+                  </button>
+                  <button id="btn-copy-sub-code" class="btn-copy-io" title="Copy code">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+              </div>
+              <pre id="sub-detail-code-text" class="sub-code-pre"></pre>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -276,7 +419,13 @@
 
               <!-- Compile Error Box -->
               <div id="lc-compile-error-box" class="lc-compile-error-box" style="display: none;">
-                <div class="lc-io-title error-title">Compiler Diagnostics</div>
+                <div class="lc-io-header">
+                  <span class="lc-io-label error-title">Compiler Diagnostics</span>
+                  <button id="btn-open-ce-left" class="btn btn-xs btn-outline-subtle" title="Open full diagnostics in Left Submissions panel">
+                    <i data-lucide="panel-left"></i>
+                    <span>Full Output</span>
+                  </button>
+                </div>
                 <pre id="lc-compile-error-text" class="code-preview error-text"></pre>
               </div>
 
@@ -348,6 +497,10 @@
                   <div id="lc-diag-group" class="lc-io-group" style="display: none;">
                     <div class="lc-io-header">
                       <span class="lc-io-label error-title" id="lc-diag-label">Difference / Diagnostics</span>
+                      <button id="btn-open-diag-left" class="btn btn-xs btn-outline-subtle" title="Open full output &amp; traceback in Left Submissions panel">
+                        <i data-lucide="panel-left"></i>
+                        <span>Full Output</span>
+                      </button>
                     </div>
                     <div id="lc-diag-content" class="lc-diff-banner"></div>
                   </div>
@@ -400,7 +553,13 @@
                   <pre id="custom-stdout-pre" class="code-preview"></pre>
                 </div>
                 <div id="custom-stderr-box" class="io-diff-box" style="display: none;">
-                  <div class="io-diff-title error-title">Standard Error (stderr)</div>
+                  <div class="lc-io-header">
+                    <span class="io-diff-title error-title">Standard Error (stderr)</span>
+                    <button id="btn-open-custom-left" class="btn btn-xs btn-outline-subtle" title="Open full error in Left Submissions panel">
+                      <i data-lucide="panel-left"></i>
+                      <span>Full Output</span>
+                    </button>
+                  </div>
                   <pre id="custom-stderr-pre" class="code-preview error-text"></pre>
                 </div>
               </div>

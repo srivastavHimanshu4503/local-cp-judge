@@ -408,11 +408,12 @@ def run_single_test(
     time_ms = round(elapsed_sec * 1000.0, 2)
     memory_mb = round(peak_rss / (1024 * 1024), 2)
 
-    # Read previews
+    # Read previews (keep data file previews compact, preserve full runtime stderr tracebacks up to 8 KB)
+    max_stderr_bytes = max(max_preview_bytes, 8192)
     input_preview = read_file_preview(Path(test_case.in_path), max_preview_bytes)
     expected_preview = read_file_preview(Path(test_case.ans_path), max_preview_bytes) if test_case.ans_path else ""
     actual_preview = read_file_preview(actual_out_path, max_preview_bytes)
-    stderr_preview = read_file_preview(stderr_path, max_preview_bytes)
+    stderr_preview = read_file_preview(stderr_path, max_stderr_bytes)
 
     # Determine verdict
     if timed_out:
@@ -562,8 +563,9 @@ def run_custom_input(
     time_ms = round(elapsed_sec * 1000.0, 2)
     memory_mb = round(peak_rss / (1024 * 1024), 2)
 
+    max_stderr_bytes = max(max_preview_bytes, 8192)
     stdout_preview = read_file_preview(actual_out_path, max_preview_bytes)
-    stderr_preview = read_file_preview(stderr_path, max_preview_bytes)
+    stderr_preview = read_file_preview(stderr_path, max_stderr_bytes)
 
     if timed_out:
         verdict = Verdict.TLE.value
