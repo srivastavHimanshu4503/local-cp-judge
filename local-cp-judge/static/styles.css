@@ -2426,6 +2426,21 @@ body {
   justify-content: flex-end;
 }
 
+.modal-card-wide {
+  max-width: 780px;
+}
+
+.modal-body-tall {
+  max-height: 70vh;
+}
+
+.full-output-pre {
+  max-height: 55vh;
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0;
+}
+
 .toolchain-item {
   display: flex;
   align-items: center;

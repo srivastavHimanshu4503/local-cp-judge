@@ -149,14 +149,14 @@
       <div id="left-view-submissions" class="left-view-panel submissions-panel">
         <div id="sub-empty-state" class="empty-state">
           <i data-lucide="history" class="empty-icon"></i>
-          <p>No submissions or test runs recorded yet for this problem.</p>
-          <span class="sub-empty-hint">Run Samples (<code>Ctrl+'</code>) or Judge All (<code>Ctrl+Enter</code>) to inspect full verdicts, outputs, and error tracebacks here.</span>
+          <p>No submissions recorded yet for this problem.</p>
+          <span class="sub-empty-hint">Judge All / Submit (<code>Ctrl+Enter</code>) to inspect full verdicts, outputs, and error tracebacks here. Sample runs stay in the bottom Test Verdicts console.</span>
         </div>
 
         <div id="sub-content-wrap" class="sub-content-wrap" style="display: none;">
           <div class="sub-history-section">
             <div class="sub-section-header">
-              <span class="sub-section-title">Run &amp; Submission History</span>
+              <span class="sub-section-title">Submission History</span>
               <button id="btn-clear-sub-history" class="btn btn-xs btn-outline-subtle" title="Clear history for this problem">Clear</button>
             </div>
             <div id="sub-history-list" class="sub-history-list"></div>
@@ -802,6 +802,29 @@
       <div class="modal-footer">
         <button id="btn-refresh-toolchains" class="btn btn-outline-subtle">
           <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Output / Traceback Modal (for Sample / Quick Output Inspection) -->
+  <div id="full-output-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="terminal"></i>
+          <span id="full-output-title">Full Output</span>
+        </div>
+        <button id="btn-close-full-output" class="btn-icon" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body modal-body-tall">
+        <pre id="full-output-text" class="sub-error-pre full-output-pre"></pre>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-copy-full-output" class="btn btn-outline-subtle">
+          <i data-lucide="copy"></i> Copy Output
         </button>
       </div>
     </div>

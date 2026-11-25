@@ -71,6 +71,8 @@ const state = {
   submissionHistoryMap: {},
   activeSubmissionId: null,
   activeSubmissionEntry: null,
+  lastJudgeSuite: null,
+  lastCompileError: "",
   timer: {
     mode: "practice", // "practice" or "contest"
     isRunning: false,
@@ -332,6 +334,13 @@ const elements = {
   toolchainModalBody: document.getElementById("toolchain-modal-body"),
   btnCloseModal: document.getElementById("btn-close-modal"),
   btnRefreshToolchains: document.getElementById("btn-refresh-toolchains"),
+
+  // Full Output Modal
+  fullOutputModal: document.getElementById("full-output-modal"),
+  fullOutputTitle: document.getElementById("full-output-title"),
+  fullOutputText: document.getElementById("full-output-text"),
+  btnCloseFullOutput: document.getElementById("btn-close-full-output"),
+  btnCopyFullOutput: document.getElementById("btn-copy-full-output"),
 };
 
 // Aliases for backward compatibility
@@ -760,7 +769,25 @@ function getSubmissionStorageKey() {
 function loadSubmissionHistoryMap() {
   try {
     const raw = localStorage.getItem(getSubmissionStorageKey());
-    state.submissionHistoryMap = raw ? JSON.parse(raw) : {};
+    const parsed = raw ? JSON.parse(raw) : {};
+    let changed = false;
+    Object.keys(parsed).forEach((k) => {
+      if (Array.isArray(parsed[k])) {
+        const filtered = parsed[k].filter((entry) => entry && entry.suite !== "sample");
+        if (filtered.length !== parsed[k].length) {
+          changed = true;
+          if (filtered.length > 0) {
+            parsed[k] = filtered;
+          } else {
+            delete parsed[k];
+          }
+        }
+      }
+    });
+    state.submissionHistoryMap = parsed;
+    if (changed) {
+      saveSubmissionHistoryMap();
+    }
   } catch (e) {
     state.submissionHistoryMap = {};
   }
@@ -794,7 +821,7 @@ function getProblemHistory(contestId = state.activeContestId, problemId = state.
   const k = getProblemHistoryKey(contestId, problemId);
   if (!k) return [];
   const list = state.submissionHistoryMap[k];
-  return Array.isArray(list) ? list : [];
+  return Array.isArray(list) ? list.filter((entry) => entry && entry.suite !== "sample") : [];
 }
 
 function updateLeftSubmissionsBadge() {
@@ -843,6 +870,18 @@ function setLeftTab(tabName) {
   }
 }
 
+function openFullOutputModal(title, text) {
+  if (!elements.fullOutputModal) return;
+  if (elements.fullOutputTitle) {
+    elements.fullOutputTitle.textContent = title || "Full Output";
+  }
+  if (elements.fullOutputText) {
+    elements.fullOutputText.textContent = text || "(empty)";
+  }
+  elements.fullOutputModal.style.display = "flex";
+  refreshIcons();
+}
+
 function openLeftSubmissions(entryId = null) {
   if (window.innerWidth <= 1024) {
     setMobilePane("statement");
@@ -871,6 +910,9 @@ function recordRunHistory({
   customRun = null,
   code = "",
 }) {
+  // Sample test case runs belong in Test Verdicts only, never in the Submissions tab
+  if (suite === "sample") return null;
+
   const pKey = getProblemHistoryKey(contestId, problemId);
   if (!pKey) return null;
 
@@ -1711,6 +1753,8 @@ async function startJudging(suite) {
 
   state.isJudging = true;
   state.testResults = [];
+  state.lastJudgeSuite = suite;
+  state.lastCompileError = "";
   clearJudgeView();
 
   const runContestId = state.activeContestId;
@@ -1747,22 +1791,25 @@ async function startJudging(suite) {
 
   es.addEventListener("compile_error", (e) => {
     const data = JSON.parse(e.data);
+    state.lastCompileError = data.error || "";
     elements.progressStageText.textContent = "Compilation Error";
     renderCompileErrorResult(data.error);
-    const recorded = recordRunHistory({
-      contestId: runContestId,
-      problemId: runProblemId,
-      kind: runKind,
-      suite,
-      lang: runLang,
-      verdict: "CE",
-      passed: 0,
-      total: 0,
-      compileError: data.error,
-      code: runCodeSnapshot,
-    });
-    if (suite === "all" && recorded) {
-      openLeftSubmissions(recorded.id);
+    if (suite !== "sample") {
+      const recorded = recordRunHistory({
+        contestId: runContestId,
+        problemId: runProblemId,
+        kind: runKind,
+        suite,
+        lang: runLang,
+        verdict: "CE",
+        passed: 0,
+        total: 0,
+        compileError: data.error,
+        code: runCodeSnapshot,
+      });
+      if (suite === "all" && recorded) {
+        openLeftSubmissions(recorded.id);
+      }
     }
     stopJudging();
   });
@@ -1797,25 +1844,28 @@ async function startJudging(suite) {
 
   es.addEventListener("summary", (e) => {
     const summary = JSON.parse(e.data);
+    const executedSuite = summary.suite || suite;
     elements.progressFill.style.width = "100%";
     elements.progressStageText.textContent = `Completed — ${summary.passed} of ${summary.total} Passed`;
     renderLeetCodeResult(summary);
-    const recorded = recordRunHistory({
-      contestId: runContestId,
-      problemId: runProblemId,
-      kind: runKind,
-      suite: summary.suite || suite,
-      lang: summary.lang || runLang,
-      verdict: summary.overall_verdict,
-      passed: summary.passed,
-      total: summary.total,
-      maxTimeMs: summary.max_time_ms,
-      maxMemoryMb: summary.max_memory_mb,
-      results: state.testResults.slice(),
-      code: runCodeSnapshot,
-    });
-    if ((summary.suite || suite) === "all" && recorded) {
-      openLeftSubmissions(recorded.id);
+    if (executedSuite !== "sample") {
+      const recorded = recordRunHistory({
+        contestId: runContestId,
+        problemId: runProblemId,
+        kind: runKind,
+        suite: executedSuite,
+        lang: summary.lang || runLang,
+        verdict: summary.overall_verdict,
+        passed: summary.passed,
+        total: summary.total,
+        maxTimeMs: summary.max_time_ms,
+        maxMemoryMb: summary.max_memory_mb,
+        results: state.testResults.slice(),
+        code: runCodeSnapshot,
+      });
+      if (executedSuite === "all" && recorded) {
+        openLeftSubmissions(recorded.id);
+      }
     }
     stopJudging();
   });
@@ -2978,10 +3028,27 @@ function initEventListeners() {
     });
   }
   if (elements.btnOpenCeLeft) {
-    elements.btnOpenCeLeft.addEventListener("click", () => openLeftSubmissions());
+    elements.btnOpenCeLeft.addEventListener("click", () => {
+      if (state.lastJudgeSuite === "sample") {
+        const text = state.lastCompileError || (elements.lcCompileErrorText ? elements.lcCompileErrorText.textContent : "");
+        openFullOutputModal("Compiler Diagnostics (Sample Run)", text);
+      } else {
+        openLeftSubmissions();
+      }
+    });
   }
   if (elements.btnOpenDiagLeft) {
-    elements.btnOpenDiagLeft.addEventListener("click", () => openLeftSubmissions());
+    elements.btnOpenDiagLeft.addEventListener("click", () => {
+      if (state.lastJudgeSuite === "sample") {
+        const tc = state.activeTestcase;
+        const text = tc
+          ? (tc.stderr_preview || tc.diff_message || tc.actual_preview || "")
+          : (elements.lcDiagContent ? elements.lcDiagContent.textContent : "");
+        openFullOutputModal(`Full Output (${tc ? tc.test_name : "Sample"})`, text);
+      } else {
+        openLeftSubmissions();
+      }
+    });
   }
   if (elements.btnOpenCustomLeft) {
     elements.btnOpenCustomLeft.addEventListener("click", () => openLeftSubmissions());
@@ -3216,6 +3283,23 @@ function initEventListeners() {
       elements.toolchainModal.style.display = "none";
     }
   });
+
+  if (elements.btnCloseFullOutput && elements.fullOutputModal) {
+    elements.btnCloseFullOutput.addEventListener("click", () => {
+      elements.fullOutputModal.style.display = "none";
+    });
+    elements.fullOutputModal.addEventListener("click", (e) => {
+      if (e.target === elements.fullOutputModal) {
+        elements.fullOutputModal.style.display = "none";
+      }
+    });
+  }
+  if (elements.btnCopyFullOutput) {
+    elements.btnCopyFullOutput.addEventListener("click", () => {
+      const text = elements.fullOutputText ? elements.fullOutputText.textContent : "";
+      navigator.clipboard.writeText(text);
+    });
+  }
 
   // Zoom In / Zoom Out Controls
   if (elements.btnZoomIn) {
