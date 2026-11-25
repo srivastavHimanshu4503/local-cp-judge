@@ -449,7 +449,12 @@ function updateStatementViewer() {
     elements.btnTogglePdf.style.display = hasAlternatePdf ? "inline-flex" : "none";
     const isPdfMode = state.statementFormat === "pdf";
     elements.btnTogglePdf.classList.toggle("active", isPdfMode);
-    elements.btnTogglePdf.textContent = isPdfMode ? "Dark Markdown" : "View PDF";
+    const toggleLabel = elements.btnTogglePdf.querySelector("span");
+    if (toggleLabel) {
+      toggleLabel.textContent = isPdfMode ? "Dark Markdown" : "View PDF";
+    } else {
+      elements.btnTogglePdf.textContent = isPdfMode ? "Dark Markdown" : "View PDF";
+    }
     elements.btnTogglePdf.title = isPdfMode
       ? "Switch back to unified Dark Markdown statement"
       : "View original contest PDF";
