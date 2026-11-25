@@ -17,7 +17,6 @@ class Verdict(str, Enum):
 
 class SupportedLang(str, Enum):
     """Supported programming languages."""
-    CPP = "cpp"
     PYTHON = "python"
     JAVA = "java"
 
@@ -60,7 +59,7 @@ class ProblemMeta(BaseModel):
     workspace_dir: str = Field(default="", description="Absolute path to the local problem workspace directory")
     files: dict[str, str] = Field(
         default_factory=dict,
-        description="Map of language identifier ('cpp', 'python', 'java') to absolute source file path on disk"
+        description="Map of language identifier ('python', 'java') to absolute source file path on disk"
     )
     reference_submissions: dict[str, list[str]] = Field(
         default_factory=dict,
@@ -82,7 +81,7 @@ class CodeUpdateRequest(BaseModel):
     """Payload to update local source file on disk."""
     model_config = ConfigDict(populate_by_name=True)
 
-    lang: str = Field(description="Target language: 'cpp', 'python', or 'java'")
+    lang: str = Field(description="Target language: 'python' or 'java'")
     code: str = Field(description="Full source code text to persist to disk")
 
 
@@ -111,7 +110,7 @@ class JudgeRunRequest(BaseModel):
 
     contest_id: str = Field(description="Contest identifier")
     problem_id: str = Field(description="Problem identifier")
-    lang: str = Field(description="Language to judge: 'cpp', 'python', or 'java'")
+    lang: str = Field(description="Language to judge: 'python' or 'java'")
     suite: str = Field(default="sample", description="Test suite to run: 'sample' or 'all'")
     ref_submission: Optional[str] = Field(
         default=None,
@@ -126,7 +125,7 @@ class CustomRunRequest(BaseModel):
 
     contest_id: str = Field(description="Contest identifier")
     problem_id: str = Field(description="Problem identifier")
-    lang: str = Field(description="Language to run: 'cpp', 'python', or 'java'")
+    lang: str = Field(description="Language to run: 'python' or 'java'")
     custom_input: str = Field(default="", description="Arbitrary custom stdin text")
     ref_submission: Optional[str] = Field(
         default=None,
@@ -238,7 +237,7 @@ class SystemStatus(BaseModel):
 
     compilers: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
-        description="Toolchain status map for 'cpp', 'python', 'java' with availability and version details"
+        description="Toolchain status map for 'python' and 'java' with availability and version details"
     )
     workspace_root: str = Field(default="", description="Absolute path to the active workspaces directory")
     os_name: str = Field(default="nt", description="Operating system identifier ('nt' for Windows)")
@@ -250,7 +249,6 @@ class AppConfig(BaseModel):
 
     host: str = Field(default="127.0.0.1", description="Server listen host")
     port: int = Field(default=8080, description="Server listen port")
-    cpp_compiler: str = Field(default="g++", description="C++ compiler binary or command")
     python_cmd: str = Field(default="python", description="Python interpreter command")
     javac_cmd: str = Field(default="javac", description="Java compiler binary or command")
     java_cmd: str = Field(default="java", description="Java runtime launcher command")

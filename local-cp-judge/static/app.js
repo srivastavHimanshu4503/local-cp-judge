@@ -274,7 +274,7 @@ function getEditorCode() {
 function setEditorCode(code, lang = state.activeLang) {
   if (state.monacoEditor) {
     state.monacoEditor.setValue(code || "");
-    const monacoLang = lang === "cpp" ? "cpp" : lang === "python" ? "python" : "java";
+    const monacoLang = lang === "python" ? "python" : "java";
     const model = state.monacoEditor.getModel();
     if (model && window.monaco) {
       window.monaco.editor.setModelLanguage(model, monacoLang);
@@ -817,11 +817,9 @@ async function fetchToolchainStatus() {
     renderToolchainsModal(data);
 
     // Update topbar summary
-    const cppOk = data.compilers.cpp && data.compilers.cpp.available;
     const pyOk = data.compilers.python && data.compilers.python.available;
     const javaOk = data.compilers.java && data.compilers.java.available;
     const parts = [];
-    if (cppOk) parts.push("C++");
     if (pyOk) parts.push("Python");
     if (javaOk) parts.push("Java");
     elements.toolchainSummaryText.textContent = parts.length > 0 ? `${parts.join("/")} Ready` : "Toolchains Missing";
@@ -835,7 +833,6 @@ function renderToolchainsModal(data) {
   container.innerHTML = "";
 
   const items = [
-    { label: "C++ Compiler (g++)", key: "cpp" },
     { label: "Python Interpreter", key: "python" },
     { label: "Java Compiler (javac)", key: "java" },
     { label: "Java Runtime (java)", key: "java_runtime" },
@@ -1017,10 +1014,10 @@ function populateStressRefSelector(refSubs) {
   brutePy.value = "brute.py";
   brutePy.textContent = "workspace/brute.py";
   wsGroup.appendChild(brutePy);
-  const bruteCpp = document.createElement("option");
-  bruteCpp.value = "brute.cpp";
-  bruteCpp.textContent = "workspace/brute.cpp";
-  wsGroup.appendChild(bruteCpp);
+  const bruteJava = document.createElement("option");
+  bruteJava.value = "Brute.java";
+  bruteJava.textContent = "workspace/Brute.java";
+  wsGroup.appendChild(bruteJava);
   elements.stressRefSelect.appendChild(wsGroup);
 
   // 3. Official submissions from contest
@@ -1939,7 +1936,6 @@ function initEventListeners() {
       const ext = "." + file.name.split(".").pop().toLowerCase();
       let lang = state.activeLang;
       if ([".py"].includes(ext)) lang = "python";
-      else if ([".cpp", ".cc", ".cxx", ".c"].includes(ext)) lang = "cpp";
       else if ([".java"].includes(ext)) lang = "java";
 
       const reader = new FileReader();

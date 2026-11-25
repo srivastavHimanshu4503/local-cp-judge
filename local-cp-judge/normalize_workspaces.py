@@ -1,7 +1,10 @@
 import shutil
 from pathlib import Path
 
+from app.parser import parse_contest_dir, resolve_problem_template
+
 workspaces_root = Path(r"E:\Personal projects\DSA Visualizer\local-cp-judge\workspaces")
+templates_root = Path(r"E:\Personal projects\DSA Visualizer\local-cp-judge\templates")
 
 # remove duplicate 15oct-contest/15oct-contest if present
 dup = workspaces_root / "15oct-contest" / "15oct-contest"
@@ -33,28 +36,24 @@ for cdir in workspaces_root.iterdir():
                         elif f.suffix.lower() == ".html" and not (pdir / "statement.html").exists():
                             shutil.copy2(f, pdir / "statement.html")
 
-        # 2. Workspace normalization: Ensure workspace directory and files exist
+        # 2. Workspace normalization: remove legacy cpp file; copy problem-specific templates or empty files
         ws_dir = pdir / "workspace"
         ws_dir.mkdir(parents=True, exist_ok=True)
         (ws_dir / ".build").mkdir(parents=True, exist_ok=True)
 
         cpp_f = ws_dir / "solution.cpp"
-        py_f = ws_dir / "solution.py"
-        java_f = ws_dir / "Main.java"
+        if cpp_f.exists():
+            cpp_f.unlink()
 
-        if not cpp_f.exists():
-            cpp_f.write_text("#include <iostream>\nusing namespace std;\n\nint main() {\n    return 0;\n}\n", encoding="utf-8")
-        if not py_f.exists():
-            tmpl_py = pdir / "template" / "main.py"
-            if tmpl_py.exists():
-                shutil.copy2(tmpl_py, py_f)
-            else:
-                py_f.write_text("import sys\n\ndef main():\n    pass\n\nif __name__ == '__main__':\n    main()\n", encoding="utf-8")
-        if not java_f.exists():
-            tmpl_java = pdir / "template" / "Main.java"
-            if tmpl_java.exists():
-                shutil.copy2(tmpl_java, java_f)
-            else:
-                java_f.write_text("import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n    }\n}\n", encoding="utf-8")
+        for lang_key, fname in (("python", "solution.py"), ("java", "Main.java")):
+            target_f = ws_dir / fname
+            if not target_f.exists():
+                tmpl_file = resolve_problem_template(pdir, lang_key)
+                if tmpl_file and tmpl_file.exists():
+                    shutil.copy2(tmpl_file, target_f)
+                else:
+                    target_f.write_text("", encoding="utf-8")
+
+    parse_contest_dir(cdir, templates_root, contest_id=cdir.name)
 
 print("Normalized all problem directories!")

@@ -51,7 +51,7 @@ def load_config(config_path: Optional[Path] = None) -> AppConfig:
 
 def check_toolchains(config: Optional[AppConfig | dict] = None) -> dict[str, dict[str, Any]]:
     """
-    Verifies availability of g++, python, javac, and java via shutil.which and version checks.
+    Verifies availability of python, javac, and java via shutil.which and version checks.
     Returns status map with paths and version strings.
     """
     if config is None:
@@ -62,7 +62,6 @@ def check_toolchains(config: Optional[AppConfig | dict] = None) -> dict[str, dic
         cfg = config
 
     tools = {
-        "cpp": (cfg.cpp_compiler, ["--version"]),
         "python": (cfg.python_cmd, ["--version"]),
         "java": (cfg.javac_cmd, ["-version"]),
         "java_runtime": (cfg.java_cmd, ["-version"]),
@@ -159,7 +158,7 @@ def compile_source(
     config: Optional[AppConfig | dict] = None,
 ) -> CompileResult:
     """
-    Compiles or syntax-checks source code for C++, Python, or Java.
+    Compiles or syntax-checks source code for Python or Java.
     Clears old artifacts in build_dir.
     Returns CompileResult with success flag, resolved run_cmd, error diagnostics, and timing.
     """
@@ -184,58 +183,7 @@ def compile_source(
     lang_lower = lang.lower()
     start_time = time.perf_counter()
 
-    if lang_lower in ("cpp", "c++"):
-        exe_name = "solution.exe" if os.name == "nt" else "solution"
-        exe_path = build_dir / exe_name
-
-        compile_cmd = [
-            cfg.cpp_compiler,
-            "-O2",
-            "-std=c++20",
-            "-pipe",
-            str(source_path.resolve()),
-            "-o",
-            str(exe_path.resolve()),
-        ]
-
-        try:
-            res = subprocess.run(
-                compile_cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=30,
-            )
-            elapsed_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
-
-            if res.returncode != 0:
-                return CompileResult(
-                    success=False,
-                    error=res.stderr or res.stdout,
-                    compile_time_ms=elapsed_ms,
-                )
-
-            return CompileResult(
-                success=True,
-                run_cmd=[str(exe_path.resolve())],
-                binary_path=str(exe_path.resolve()),
-                compile_time_ms=elapsed_ms,
-            )
-        except subprocess.TimeoutExpired:
-            return CompileResult(
-                success=False,
-                error="Compilation timed out after 30 seconds.",
-                compile_time_ms=30000.0,
-            )
-        except Exception as e:
-            return CompileResult(
-                success=False,
-                error=f"Compilation error: {e}",
-                compile_time_ms=round((time.perf_counter() - start_time) * 1000.0, 2),
-            )
-
-    elif lang_lower in ("python", "py"):
+    if lang_lower in ("python", "py"):
         # Syntax check using py_compile to catch CE before judging test cases
         compile_cmd = [cfg.python_cmd, "-m", "py_compile", str(source_path.resolve())]
 
@@ -348,7 +296,7 @@ def compile_source(
     else:
         return CompileResult(
             success=False,
-            error=f"Unsupported language: '{lang}' (supported: 'cpp', 'python', 'java')",
+            error=f"Unsupported language: '{lang}' (supported: 'python', 'java')",
             compile_time_ms=0.0,
         )
 

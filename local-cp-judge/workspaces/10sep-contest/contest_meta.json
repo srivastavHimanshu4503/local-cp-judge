@@ -1,7 +1,7 @@
 {
   "contest_id": "10sep-contest",
   "title": "10Sep Contest",
-  "created_at": "2026-11-24T18:34:23.924892+00:00",
+  "created_at": "2026-11-25T17:33:15.392087+00:00",
   "problems": [
     {
       "problem_id": "A-rabbit-frog-1",
@@ -17,7 +17,6 @@
       "secret_count": 0,
       "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace",
       "files": {
-        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace\\solution.cpp",
         "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace\\solution.py",
         "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace\\Main.java"
       },
@@ -41,7 +40,6 @@
       "secret_count": 0,
       "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace",
       "files": {
-        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace\\solution.cpp",
         "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace\\solution.py",
         "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace\\Main.java"
       },
@@ -65,7 +63,6 @@
       "secret_count": 0,
       "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace",
       "files": {
-        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace\\solution.cpp",
         "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace\\solution.py",
         "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace\\Main.java"
       },
@@ -89,7 +86,6 @@
       "secret_count": 0,
       "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace",
       "files": {
-        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace\\solution.cpp",
         "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace\\solution.py",
         "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace\\Main.java"
       },

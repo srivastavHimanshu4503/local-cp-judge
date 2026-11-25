@@ -44,6 +44,7 @@ from app.parser import (
     get_problem_test_cases,
     list_contests,
     load_contest,
+    resolve_problem_template,
 )
 from app.runner import (
     check_toolchains,
@@ -68,20 +69,28 @@ SESSION_COOKIE_NAME = "cp_session_id"
 SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9_\-]{8,64}$")
 
 LANG_FILENAMES = {
-    "cpp": "solution.cpp",
-    "c++": "solution.cpp",
     "python": "solution.py",
     "py": "solution.py",
     "java": "Main.java",
 }
 
 EXTENSION_TO_LANG = {
-    ".cpp": "cpp",
-    ".cc": "cpp",
-    ".cxx": "cpp",
     ".py": "python",
     ".java": "java",
 }
+
+
+def _resolve_supported_lang(lang: str) -> str:
+    """Validates and normalizes language to 'python' or 'java'."""
+    lang_key = (lang or "").lower().strip()
+    if lang_key in ("python", "py"):
+        return "python"
+    if lang_key == "java":
+        return "java"
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported language '{lang}'. Only Python and Java are supported.",
+    )
 
 app = FastAPI(
     title="Local CP Judge",
@@ -126,20 +135,14 @@ def _is_local_request(request: Request) -> bool:
 
 
 def _seed_user_workspace(shared_problem_dir: Path, workspace_dir: Path) -> None:
-    """Initializes an isolated per-user problem workspace from problem templates or default templates."""
+    """Initializes an isolated per-user workspace strictly from problem templates (or empty files)."""
     workspace_dir.mkdir(parents=True, exist_ok=True)
-    prob_tpl_dir = shared_problem_dir / "template"
-    defaults = {
-        "solution.py": (prob_tpl_dir / "solution.py", TEMPLATES_DIR / "python_template.py"),
-        "solution.cpp": (prob_tpl_dir / "solution.cpp", TEMPLATES_DIR / "cpp_template.cpp"),
-        "Main.java": (prob_tpl_dir / "Main.java", TEMPLATES_DIR / "java_template.java"),
-    }
-    for fname, (prob_tpl, global_tpl) in defaults.items():
+    for lang_key, fname in (("python", "solution.py"), ("java", "Main.java")):
         dst = workspace_dir / fname
         if not dst.exists():
-            src = prob_tpl if prob_tpl.exists() else global_tpl
-            if src.exists():
-                shutil.copy2(src, dst)
+            prob_tpl = resolve_problem_template(shared_problem_dir, lang_key)
+            if prob_tpl and prob_tpl.exists():
+                shutil.copy2(prob_tpl, dst)
             else:
                 dst.write_text("", encoding="utf-8")
 
@@ -305,7 +308,7 @@ def get_problem_statement(contest_id: str, problem_id: str):
             if "obsidian-statement-theme" not in raw_html:
                 obsidian_override = """<style>
 /* obsidian-statement-theme */
-:root { --ink: #A1A1AA !important; --muted: #71717A !important; --accent: #E4E4E7 !important; --panel: #111115 !important; --rule: #27272A !important; }
+:root { --ink: #A1A1AA !important; --muted: #71717A !important; --accent: #E4E4E7 !important; --paper: #09090B !important; --panel: #111115 !important; --rule: #27272A !important; --line: #27272A !important; }
 * { scrollbar-width: thin; scrollbar-color: #27272A transparent; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -347,7 +350,7 @@ def get_problem_code(
     session_id: Optional[str] = Depends(get_session_id),
 ) -> CodeResponse:
     """
-    Reads code from either the user's isolated workspace (solution.cpp, solution.py, Main.java)
+    Reads code from either the user's isolated workspace (solution.py, Main.java)
     or an included reference submission under submissions/.
     """
     _, prob = get_contest_and_problem(contest_id, problem_id)
@@ -371,7 +374,12 @@ def get_problem_code(
             )
 
         ext = target_file.suffix.lower()
-        inferred_lang = EXTENSION_TO_LANG.get(ext, lang.lower())
+        if ext not in EXTENSION_TO_LANG:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported reference submission extension '{ext}'. Only Python and Java are supported.",
+            )
+        inferred_lang = EXTENSION_TO_LANG[ext]
         code_text = target_file.read_text(encoding="utf-8", errors="replace")
         mtime = target_file.stat().st_mtime
 
@@ -383,15 +391,14 @@ def get_problem_code(
             is_reference=True,
         )
     else:
-        lang_key = lang.lower()
-        filename = LANG_FILENAMES.get(lang_key, "solution.cpp")
+        lang_key = _resolve_supported_lang(lang)
+        filename = LANG_FILENAMES[lang_key]
         target_file = workspace_dir / filename
 
         if not target_file.exists():
-            tpl_ext = filename.split(".")[-1]
-            candidate_tpl = TEMPLATES_DIR / f"{lang_key}_template.{tpl_ext}"
-            if candidate_tpl.exists():
-                shutil.copy2(candidate_tpl, target_file)
+            prob_tpl = resolve_problem_template(problem_dir, lang_key)
+            if prob_tpl and prob_tpl.exists():
+                shutil.copy2(prob_tpl, target_file)
             else:
                 target_file.write_text("", encoding="utf-8")
 
@@ -418,8 +425,8 @@ def update_problem_code(
     _, prob = get_contest_and_problem(contest_id, problem_id)
     _, workspace_dir, _, _ = get_problem_dirs(contest_id, prob.problem_id, session_id)
 
-    lang_key = payload.lang.lower()
-    filename = LANG_FILENAMES.get(lang_key, "solution.cpp")
+    lang_key = _resolve_supported_lang(payload.lang)
+    filename = LANG_FILENAMES[lang_key]
     target_file = workspace_dir / filename
 
     target_file.write_text(payload.code, encoding="utf-8", errors="replace")
@@ -455,8 +462,8 @@ def open_external_editor(
     _, prob = get_contest_and_problem(contest_id, problem_id)
     _, workspace_dir, _, _ = get_problem_dirs(contest_id, prob.problem_id, session_id)
 
-    lang_key = (payload.lang or "python").lower()
-    filename = LANG_FILENAMES.get(lang_key, "solution.cpp")
+    lang_key = _resolve_supported_lang(payload.lang or "python")
+    filename = LANG_FILENAMES[lang_key]
     source_file = workspace_dir / filename
 
     target = payload.target.lower()
@@ -520,15 +527,22 @@ async def stream_judge_execution(
         contest_id, prob.problem_id, session_id
     )
 
-    judge_lang = lang.lower()
+    judge_lang = (lang or "python").lower().strip()
 
     if ref_submission:
         clean_ref = ref_submission.replace("\\", "/").strip().lstrip("/")
         source_path = (problem_dir / "submissions" / clean_ref).resolve()
         ext = source_path.suffix.lower()
-        judge_lang = EXTENSION_TO_LANG.get(ext, judge_lang)
+        judge_lang = EXTENSION_TO_LANG.get(ext, "")
+        if not judge_lang:
+            yield f"event: compile_error\ndata: {json.dumps({'verdict': 'CE', 'error': f'Unsupported reference file extension {ext}. Only Python and Java are supported.'})}\n\n"
+            return
     else:
-        filename = LANG_FILENAMES.get(judge_lang, "solution.cpp")
+        if judge_lang not in LANG_FILENAMES:
+            yield f"event: compile_error\ndata: {json.dumps({'verdict': 'CE', 'error': f'Unsupported language {lang}. Only Python and Java are supported.'})}\n\n"
+            return
+        judge_lang = "python" if judge_lang == "py" else judge_lang
+        filename = LANG_FILENAMES[judge_lang]
         source_path = workspace_dir / filename
 
     if not source_path.exists():
@@ -709,15 +723,19 @@ async def judge_custom_input(
         payload.contest_id, prob.problem_id, session_id
     )
 
-    judge_lang = payload.lang.lower()
-
     if payload.ref_submission:
         clean_ref = payload.ref_submission.replace("\\", "/").strip().lstrip("/")
         source_path = (problem_dir / "submissions" / clean_ref).resolve()
         ext = source_path.suffix.lower()
-        judge_lang = EXTENSION_TO_LANG.get(ext, judge_lang)
+        if ext not in EXTENSION_TO_LANG:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported reference file extension '{ext}'. Only Python and Java are supported.",
+            )
+        judge_lang = EXTENSION_TO_LANG[ext]
     else:
-        filename = LANG_FILENAMES.get(judge_lang, "solution.cpp")
+        judge_lang = _resolve_supported_lang(payload.lang)
+        filename = LANG_FILENAMES[judge_lang]
         source_path = workspace_dir / filename
 
     if not source_path.exists():
@@ -1081,8 +1099,14 @@ async def run_stress_test(
     )
     cfg = load_config()
 
-    user_lang = payload.lang or "python"
-    user_filename = LANG_FILENAMES.get(user_lang, "solution.py")
+    raw_user_lang = (payload.lang or "python").lower().strip()
+    if raw_user_lang not in LANG_FILENAMES:
+        return StressTestResult(
+            status="error",
+            message=f"Unsupported language '{payload.lang}'. Only Python and Java are supported.",
+        )
+    user_lang = "python" if raw_user_lang == "py" else raw_user_lang
+    user_filename = LANG_FILENAMES[user_lang]
     user_source = workspace_dir / user_filename
 
     if not user_source.exists():
@@ -1128,7 +1152,7 @@ async def run_stress_test(
         # Check workspace first for custom brute force
         for w_cand in [
             workspace_dir / "brute.py",
-            workspace_dir / "brute.cpp",
+            workspace_dir / "Brute.java",
             workspace_dir / "solution_brute.py",
             workspace_dir / "ref.py",
         ]:
@@ -1144,18 +1168,16 @@ async def run_stress_test(
                         is_accepted = "accepted" in [p.lower() for p in f.parts]
                         f_ext = f.suffix.lower()
                         f_lang = EXTENSION_TO_LANG.get(f_ext, "")
-                        # Prioritize matching user language, then Python, then C++, then Java
+                        # Prioritize matching user language, then Python, then Java
                         lang_score = 0
                         if f_lang == user_lang:
-                            lang_score = 4
-                        elif f_lang == "python":
                             lang_score = 3
-                        elif f_lang == "cpp":
+                        elif f_lang == "python":
                             lang_score = 2
                         elif f_lang == "java":
                             lang_score = 1
                         # Prefer canonical ref.py / solution.py first
-                        canonical_score = 1 if f.name.lower() in ("ref.py", "solution.py", "ref.cpp", "ref.java") else 0
+                        canonical_score = 1 if f.name.lower() in ("ref.py", "solution.py", "ref.java", "brute.py", "brute.java") else 0
                         sub_files.append((is_accepted, lang_score, canonical_score, f))
 
         # Sort: accepted first, then highest lang score, then canonical filename
@@ -1177,7 +1199,9 @@ async def run_stress_test(
 
     for cand_path in ref_candidates:
         cand_ext = cand_path.suffix.lower()
-        cand_lang = EXTENSION_TO_LANG.get(cand_ext, "cpp")
+        cand_lang = EXTENSION_TO_LANG.get(cand_ext, "")
+        if not cand_lang:
+            continue
         c_res = await asyncio.to_thread(
             compile_source,
             cand_path,

@@ -105,7 +105,6 @@ def main() -> int:
     tc_headers = ["Toolchain", "Status", "Version / Path"]
     tc_rows = []
     for key, name in [
-        ("cpp", "C++ (g++)"),
         ("python", "Python"),
         ("java", "Java Compiler (javac)"),
         ("java_runtime", "Java Runtime (java)"),

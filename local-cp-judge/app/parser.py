@@ -173,6 +173,41 @@ def get_problem_test_cases(
     return results
 
 
+def resolve_problem_template(problem_dir: Path, lang: str) -> Optional[Path]:
+    """
+    Returns a problem-specific starter template under problem_dir/template/
+    for 'python' or 'java', or None if no problem-specific template exists.
+    Checks standard naming conventions (solution.py/main.py, Main.java/main.java).
+    """
+    prob_template_dir = problem_dir / "template"
+    if not prob_template_dir.exists() or not prob_template_dir.is_dir():
+        return None
+
+    lang_key = lang.lower()
+    if lang_key in ("python", "py"):
+        candidates = ("solution.py", "main.py")
+        ext = ".py"
+    elif lang_key == "java":
+        candidates = ("Main.java", "main.java", "solution.java")
+        ext = ".java"
+    else:
+        return None
+
+    for name in candidates:
+        cand = prob_template_dir / name
+        if cand.exists() and cand.is_file() and not is_ignored_path(cand):
+            return cand
+
+    matches = sorted(
+        (
+            f for f in prob_template_dir.iterdir()
+            if f.is_file() and not is_ignored_path(f) and f.suffix.lower() == ext
+        ),
+        key=lambda p: natural_sort_key(p.name),
+    )
+    return matches[0] if matches else None
+
+
 def scaffold_problem_workspace(
     problem_dir: Path,
     templates_dir: Path,
@@ -183,8 +218,8 @@ def scaffold_problem_workspace(
 ) -> tuple[Path, dict[str, str]]:
     """
     Initializes <problem_dir>/workspace/ and .build/ directory.
-    Copies starter templates (solution.cpp, solution.py, Main.java) without
-    overwriting existing user files.
+    Copies problem-specific starter templates (solution.py, Main.java) when provided
+    under template/ without overwriting existing user files; creates empty files otherwise.
     Generates VS Code CPH (.cph/) test configuration files.
     """
     workspace_dir = problem_dir / "workspace"
@@ -195,36 +230,25 @@ def scaffold_problem_workspace(
     build_dir.mkdir(parents=True, exist_ok=True)
     cph_dir.mkdir(parents=True, exist_ok=True)
 
-    cpp_target = workspace_dir / "solution.cpp"
     py_target = workspace_dir / "solution.py"
     java_target = workspace_dir / "Main.java"
 
-    prob_template_dir = problem_dir / "template"
-    cpp_src = (
-        (prob_template_dir / "solution.cpp")
-        if (prob_template_dir / "solution.cpp").exists()
-        else (templates_dir / "cpp_template.cpp")
-    )
-    py_src = (
-        (prob_template_dir / "solution.py")
-        if (prob_template_dir / "solution.py").exists()
-        else (templates_dir / "python_template.py")
-    )
-    java_src = (
-        (prob_template_dir / "Main.java")
-        if (prob_template_dir / "Main.java").exists()
-        else (templates_dir / "java_template.java")
-    )
+    py_src = resolve_problem_template(problem_dir, "python")
+    java_src = resolve_problem_template(problem_dir, "java")
 
-    if not cpp_target.exists() and cpp_src.exists():
-        shutil.copy2(cpp_src, cpp_target)
-    if not py_target.exists() and py_src.exists():
-        shutil.copy2(py_src, py_target)
-    if not java_target.exists() and java_src.exists():
-        shutil.copy2(java_src, java_target)
+    if not py_target.exists():
+        if py_src and py_src.exists():
+            shutil.copy2(py_src, py_target)
+        else:
+            py_target.write_text("", encoding="utf-8")
+
+    if not java_target.exists():
+        if java_src and java_src.exists():
+            shutil.copy2(java_src, java_target)
+        else:
+            java_target.write_text("", encoding="utf-8")
 
     files_dict = {
-        "cpp": str(cpp_target.resolve()),
         "python": str(py_target.resolve()),
         "java": str(java_target.resolve()),
     }
@@ -254,7 +278,7 @@ def scaffold_problem_workspace(
             "output": ans_content,
         })
 
-    for target_file in (cpp_target, py_target, java_target):
+    for target_file in (py_target, java_target):
         cph_config = {
             "name": problem_name,
             "url": "",
@@ -580,22 +604,44 @@ def extract_and_parse_contest(
     return parse_contest_dir(contest_dir, templates_dir, contest_id=contest_id)
 
 
+def _meta_needs_refresh(contest_dir: Path, meta: ContestMeta) -> bool:
+    """Detects stale contest_meta.json missing statement flags or containing removed cpp entries."""
+    for p in meta.problems:
+        if "cpp" in p.files:
+            return True
+        prob_dir = contest_dir / p.problem_id
+        has_pdf = (prob_dir / "problem.pdf").exists() or (prob_dir / "statement" / "problem.pdf").exists()
+        has_html = (
+            (prob_dir / "statement.html").exists()
+            or (prob_dir / "problem.html").exists()
+            or (prob_dir / "statement" / "problem.html").exists()
+        )
+        if (has_pdf or has_html) and not p.has_statement:
+            return True
+    return False
+
+
 def list_contests(workspaces_root: Path) -> list[ContestMeta]:
     """
     Scans workspaces_root for imported contests containing contest_meta.json.
+    Auto-refreshes stale metadata if statement detection or language maps changed.
     Returns a list of ContestMeta objects.
     """
     if not workspaces_root.exists() or not workspaces_root.is_dir():
         return []
 
     contests: list[ContestMeta] = []
+    templates_dir = workspaces_root.parent / "templates"
     for item in workspaces_root.iterdir():
         if item.is_dir() and not is_ignored_path(item):
             meta_path = item / "contest_meta.json"
             if meta_path.exists() and meta_path.is_file():
                 try:
                     content = meta_path.read_text(encoding="utf-8", errors="replace")
-                    contests.append(ContestMeta.model_validate_json(content))
+                    meta = ContestMeta.model_validate_json(content)
+                    if _meta_needs_refresh(item, meta):
+                        meta = parse_contest_dir(item, templates_dir, contest_id=meta.contest_id)
+                    contests.append(meta)
                 except Exception:
                     pass
 
@@ -606,11 +652,16 @@ def list_contests(workspaces_root: Path) -> list[ContestMeta]:
 def load_contest(contest_id: str, workspaces_root: Path) -> ContestMeta:
     """
     Loads and returns ContestMeta for a given contest_id from workspaces_root.
+    Auto-refreshes stale metadata if statement detection or language maps changed.
     Raises FileNotFoundError if contest_meta.json does not exist.
     """
-    meta_path = workspaces_root / contest_id / "contest_meta.json"
+    contest_dir = workspaces_root / contest_id
+    meta_path = contest_dir / "contest_meta.json"
     if not meta_path.exists():
         raise FileNotFoundError(f"Contest metadata not found for contest '{contest_id}' at {meta_path}")
 
     content = meta_path.read_text(encoding="utf-8", errors="replace")
-    return ContestMeta.model_validate_json(content)
+    meta = ContestMeta.model_validate_json(content)
+    if _meta_needs_refresh(contest_dir, meta):
+        meta = parse_contest_dir(contest_dir, workspaces_root.parent / "templates", contest_id=meta.contest_id)
+    return meta
