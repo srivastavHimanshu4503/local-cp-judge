@@ -423,6 +423,10 @@ const BASE_FONT_SIZE = 16;
 const MIN_FONT_SIZE = 10;
 const MAX_FONT_SIZE = 36;
 
+function computeEditorLineHeight(fontSize) {
+  return Math.round((Number(fontSize) || BASE_FONT_SIZE) * 1.75);
+}
+
 function updateZoomUI(fontSize) {
   if (elements.zoomLevelText) {
     const pct = Math.round((fontSize / BASE_FONT_SIZE) * 100);
@@ -432,11 +436,14 @@ function updateZoomUI(fontSize) {
 
   if (elements.editorFallback) {
     elements.editorFallback.style.fontSize = `${fontSize}px`;
+    elements.editorFallback.style.lineHeight = "1.75";
   }
   if (state.monacoDiffEditor) {
     try {
+      const diffFontSize = Math.max(10, fontSize - 1.5);
       state.monacoDiffEditor.updateOptions({
-        fontSize: Math.max(10, fontSize - 1.5),
+        fontSize: diffFontSize,
+        lineHeight: computeEditorLineHeight(diffFontSize),
       });
     } catch (e) {}
   }
@@ -446,7 +453,10 @@ function setEditorFontSize(newSize) {
   const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newSize));
   state.editorFontSize = clamped;
   if (state.monacoEditor) {
-    state.monacoEditor.updateOptions({ fontSize: clamped });
+    state.monacoEditor.updateOptions({
+      fontSize: clamped,
+      lineHeight: computeEditorLineHeight(clamped),
+    });
   }
   updateZoomUI(clamped);
 }
@@ -583,7 +593,7 @@ function initMonacoEditor() {
         automaticLayout: true,
         fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
         fontSize: state.editorFontSize || BASE_FONT_SIZE,
-        lineHeight: 24,
+        lineHeight: computeEditorLineHeight(state.editorFontSize || BASE_FONT_SIZE),
         mouseWheelZoom: true,
         wordWrap: state.isWordWrap ? "on" : "off",
         lineNumbersMinChars: 3,
@@ -605,6 +615,11 @@ function initMonacoEditor() {
       state.monacoEditor.onDidChangeConfiguration((e) => {
         if (e.hasChanged(window.monaco.editor.EditorOption.fontSize)) {
           const currentSize = state.monacoEditor.getOption(window.monaco.editor.EditorOption.fontSize);
+          const targetLineHeight = computeEditorLineHeight(currentSize);
+          const currentLineHeight = state.monacoEditor.getOption(window.monaco.editor.EditorOption.lineHeight);
+          if (currentLineHeight !== targetLineHeight) {
+            state.monacoEditor.updateOptions({ lineHeight: targetLineHeight });
+          }
           state.editorFontSize = currentSize;
           updateZoomUI(currentSize);
         }
@@ -612,11 +627,13 @@ function initMonacoEditor() {
 
       // Initialize Side-by-Side Monaco Diff Editor
       if (elements.lcMonacoDiffContainer) {
+        const diffFontSize = Math.max(10, (state.editorFontSize || BASE_FONT_SIZE) - 1.5);
         state.monacoDiffEditor = window.monaco.editor.createDiffEditor(elements.lcMonacoDiffContainer, {
           theme: "obsidian-dark",
           automaticLayout: true,
           fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
-          fontSize: Math.max(10, (state.editorFontSize || BASE_FONT_SIZE) - 1.5),
+          fontSize: diffFontSize,
+          lineHeight: computeEditorLineHeight(diffFontSize),
           readOnly: true,
           renderSideBySide: true,
           wordWrap: state.isWordWrap ? "on" : "off",
