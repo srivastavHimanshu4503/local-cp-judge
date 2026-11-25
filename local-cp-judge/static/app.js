@@ -80,11 +80,16 @@ const state = {
 // =====================================================================
 const elements = {
   contestSelect: document.getElementById("contest-select"),
-  mobileProblemSelect: document.getElementById("mobile-problem-select"),
+  problemSelect: document.getElementById("problem-select"),
+  activeProblemDot: document.getElementById("active-problem-dot"),
+  btnPrevProblem: document.getElementById("btn-prev-problem"),
+  btnNextProblem: document.getElementById("btn-next-problem"),
+  btnTopRun: document.getElementById("btn-top-run"),
+  btnTopSubmit: document.getElementById("btn-top-submit"),
+  btnTopStop: document.getElementById("btn-top-stop"),
   mobilePaneSwitcher: document.getElementById("mobile-pane-switcher"),
   btnUpload: document.getElementById("btn-upload"),
   uploadInput: document.getElementById("upload-input"),
-  problemTabs: document.getElementById("problem-tabs"),
   btnToolchainStatus: document.getElementById("btn-toolchain-status"),
   toolchainSummaryText: document.getElementById("toolchain-summary-text"),
 
@@ -1356,56 +1361,60 @@ async function selectContest(contestId) {
 }
 
 function renderProblemTabs(problems) {
-  elements.problemTabs.innerHTML = "";
-  if (elements.mobileProblemSelect) {
-    elements.mobileProblemSelect.innerHTML = "";
-  }
+  if (!elements.problemSelect) return;
+  elements.problemSelect.innerHTML = "";
 
   problems.forEach((prob) => {
-    const tab = document.createElement("button");
-    const isActive = prob.problem_id === state.activeProblemId;
     const statusData = state.problemStatuses[prob.problem_id];
-    let extraClass = "";
-    if (statusData && statusData.verdict === "AC") {
-      extraClass = "problem-solved";
-    } else if (statusData && statusData.verdict) {
-      extraClass = "problem-attempted";
-    }
-    tab.className = `problem-tab ${isActive ? "active" : ""} ${extraClass}`.trim();
-    tab.dataset.problemId = prob.problem_id;
-    tab.title = `${prob.short_name} · ${prob.name} (${prob.time_limit_sec}s)`;
-
-    const dot = document.createElement("span");
-    dot.className = "problem-status-dot";
-    tab.appendChild(dot);
-
-    const label = document.createElement("span");
-    label.className = "problem-tab-label";
-    // Active pill shows full name ("A · Rabbit / Frog 1"); inactive pills stay compact ("B", "C", "D")
-    label.textContent = isActive ? `${prob.short_name} · ${prob.name}` : prob.short_name;
-    tab.appendChild(label);
-
-    if (statusData && statusData.verdict && statusData.verdict !== "AC" && isActive) {
-      const tag = document.createElement("span");
-      tag.className = "tab-verdict-tag tag-wa";
-      tag.textContent = statusData.verdict;
-      tab.appendChild(tag);
-    }
-
-    tab.addEventListener("click", () => selectProblem(prob.problem_id));
-    elements.problemTabs.appendChild(tab);
-
-    if (elements.mobileProblemSelect) {
-      const opt = document.createElement("option");
-      opt.value = prob.problem_id;
-      const suffix = statusData && statusData.verdict ? ` [${statusData.verdict}]` : "";
-      opt.textContent = `${prob.short_name} · ${prob.name}${suffix}`;
-      elements.mobileProblemSelect.appendChild(opt);
-    }
+    const opt = document.createElement("option");
+    opt.value = prob.problem_id;
+    const suffix = statusData && statusData.verdict ? ` [${statusData.verdict}]` : "";
+    opt.textContent = `${prob.short_name} · ${prob.name}${suffix}`;
+    elements.problemSelect.appendChild(opt);
   });
 
-  if (elements.mobileProblemSelect && state.activeProblemId) {
-    elements.mobileProblemSelect.value = state.activeProblemId;
+  if (state.activeProblemId) {
+    elements.problemSelect.value = state.activeProblemId;
+  }
+
+  // Update active problem status dot
+  if (elements.activeProblemDot) {
+    const stat = state.activeProblemId ? state.problemStatuses[state.activeProblemId] : null;
+    if (stat && stat.verdict === "AC") {
+      elements.activeProblemDot.className = "problem-status-dot active-dot dot-solved";
+    } else if (stat && stat.verdict) {
+      elements.activeProblemDot.className = "problem-status-dot active-dot dot-attempted";
+    } else {
+      elements.activeProblemDot.className = "problem-status-dot active-dot";
+    }
+  }
+
+  // Update Prev / Next question navigation state
+  const activeIdx = problems.findIndex((p) => p.problem_id === state.activeProblemId);
+  if (elements.btnPrevProblem) {
+    const hasPrev = activeIdx > 0;
+    elements.btnPrevProblem.disabled = !hasPrev;
+    elements.btnPrevProblem.title = hasPrev
+      ? `Previous: ${problems[activeIdx - 1].short_name} · ${problems[activeIdx - 1].name}`
+      : "No previous question";
+  }
+  if (elements.btnNextProblem) {
+    const hasNext = activeIdx >= 0 && activeIdx < problems.length - 1;
+    elements.btnNextProblem.disabled = !hasNext;
+    elements.btnNextProblem.title = hasNext
+      ? `Next: ${problems[activeIdx + 1].short_name} · ${problems[activeIdx + 1].name}`
+      : "Last question in contest";
+  }
+}
+
+async function navigateProblem(delta) {
+  if (!state.contestMeta || !state.contestMeta.problems) return;
+  const problems = state.contestMeta.problems;
+  const idx = problems.findIndex((p) => p.problem_id === state.activeProblemId);
+  if (idx < 0) return;
+  const nextIdx = idx + delta;
+  if (nextIdx >= 0 && nextIdx < problems.length) {
+    await selectProblem(problems[nextIdx].problem_id);
   }
 }
 
@@ -1646,6 +1655,9 @@ async function startJudging(suite) {
   elements.btnRunSamples.style.display = "none";
   elements.btnJudgeAll.style.display = "none";
   elements.btnStopJudge.style.display = "inline-flex";
+  if (elements.btnTopRun) elements.btnTopRun.style.display = "none";
+  if (elements.btnTopSubmit) elements.btnTopSubmit.style.display = "none";
+  if (elements.btnTopStop) elements.btnTopStop.style.display = "inline-flex";
 
   elements.progressBar.style.display = "block";
   elements.progressStageText.textContent = "Compiling solution...";
@@ -1756,6 +1768,9 @@ function stopJudging() {
   elements.btnRunSamples.style.display = "inline-flex";
   elements.btnJudgeAll.style.display = "inline-flex";
   elements.btnStopJudge.style.display = "none";
+  if (elements.btnTopRun) elements.btnTopRun.style.display = "inline-flex";
+  if (elements.btnTopSubmit) elements.btnTopSubmit.style.display = "inline-flex";
+  if (elements.btnTopStop) elements.btnTopStop.style.display = "none";
   refreshIcons();
 }
 
@@ -2577,13 +2592,19 @@ function initEventListeners() {
     }
   });
 
-  // Responsive problem selector dropdown (< 1024px)
-  if (elements.mobileProblemSelect) {
-    elements.mobileProblemSelect.addEventListener("change", (e) => {
+  // Header Problem Selector & Prev/Next Question Navigation
+  if (elements.problemSelect) {
+    elements.problemSelect.addEventListener("change", (e) => {
       if (e.target.value) {
         selectProblem(e.target.value);
       }
     });
+  }
+  if (elements.btnPrevProblem) {
+    elements.btnPrevProblem.addEventListener("click", () => navigateProblem(-1));
+  }
+  if (elements.btnNextProblem) {
+    elements.btnNextProblem.addEventListener("click", () => navigateProblem(1));
   }
 
   // Open in VS Code
@@ -2622,10 +2643,19 @@ function initEventListeners() {
     state.autoSync = e.target.checked;
   });
 
-  // Judge Actions
+  // Judge Actions (both Center Topbar & Bottom Footer)
   elements.btnRunSamples.addEventListener("click", () => startJudging("sample"));
   elements.btnJudgeAll.addEventListener("click", () => startJudging("all"));
   elements.btnStopJudge.addEventListener("click", stopJudging);
+  if (elements.btnTopRun) {
+    elements.btnTopRun.addEventListener("click", () => startJudging("sample"));
+  }
+  if (elements.btnTopSubmit) {
+    elements.btnTopSubmit.addEventListener("click", () => startJudging("all"));
+  }
+  if (elements.btnTopStop) {
+    elements.btnTopStop.addEventListener("click", stopJudging);
+  }
 
   // Console toggle & collapse
   if (elements.btnToggleConsole) {

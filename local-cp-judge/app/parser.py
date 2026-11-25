@@ -39,6 +39,28 @@ def natural_sort_key(s: str) -> list[int | str]:
     return [int(chunk) if chunk.isdigit() else chunk.lower() for chunk in re.split(r'(\d+)', s)]
 
 
+MONTH_ORDER = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def contest_sort_key(contest_id: str) -> tuple:
+    """
+    Orders contests chronologically from earliest date (e.g. 10sep before 17sep before 15oct)
+    followed by undated contests in natural alphanumeric order.
+    """
+    match = re.search(
+        r'(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)',
+        contest_id.lower(),
+    )
+    if match:
+        day = int(match.group(1))
+        month = MONTH_ORDER[match.group(2)]
+        return (0, month, day, natural_sort_key(contest_id))
+    return (1, 0, 0, natural_sort_key(contest_id))
+
+
 def clean_quoted_string(val: str) -> str:
     """Strips surrounding whitespace and single/double quotes from INI/YAML values."""
     s = val.strip()
@@ -645,7 +667,7 @@ def list_contests(workspaces_root: Path) -> list[ContestMeta]:
                 except Exception:
                     pass
 
-    contests.sort(key=lambda c: natural_sort_key(c.contest_id))
+    contests.sort(key=lambda c: contest_sort_key(c.contest_id))
     return contests
 
 

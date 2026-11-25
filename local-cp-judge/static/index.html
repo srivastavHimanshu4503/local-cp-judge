@@ -14,16 +14,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 </head>
 <body>
-  <!-- Slim Top Navigation Bar (48px) -->
+  <!-- Slim LeetCode-Inspired Top Navigation Bar (52px) -->
   <header class="topbar">
     <div class="topbar-left">
-      <button id="btn-toggle-sidebar" class="btn-icon btn-sidebar-toggle active" title="Toggle Problem Statement (Ctrl+B)">
+      <button id="btn-toggle-sidebar" class="btn-icon btn-sidebar-toggle active" title="Toggle Left Panel (Ctrl+B)">
         <i data-lucide="panel-left"></i>
       </button>
 
       <div class="brand">
         <span class="brand-logo" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="4"></rect>
             <polyline points="9 9 6 12 9 15"></polyline>
             <polyline points="15 9 18 12 15 15"></polyline>
@@ -33,16 +33,43 @@
       </div>
 
       <div class="contest-controls">
-        <select id="contest-select" class="select-pill" title="Active Contest">
+        <select id="contest-select" class="select-pill select-contest-pill" title="Active Contest (Chronological Order)">
           <option value="">Loading contests...</option>
         </select>
-        <!-- Compact Problem Dropdown for < 1024px screens -->
-        <select id="mobile-problem-select" class="select-pill mobile-problem-select" title="Select Problem"></select>
+
+        <div class="problem-nav-group">
+          <div class="problem-select-wrap">
+            <span id="active-problem-dot" class="problem-status-dot active-dot" aria-hidden="true"></span>
+            <select id="problem-select" class="select-pill select-problem-pill" title="Select Question"></select>
+          </div>
+          <button id="btn-prev-problem" class="btn-header-nav" title="Previous Question">
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <button id="btn-next-problem" class="btn-header-nav btn-next-problem" title="Next Question in Contest">
+            <span>Next</span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Center: Segmented Problem Switcher Pills -->
-    <nav id="problem-tabs" class="problem-tabs-pillgroup" aria-label="Contest Problems"></nav>
+    <!-- Center: LeetCode-Style Unified Run & Submit Execution Controls -->
+    <div class="topbar-center">
+      <div class="topbar-exec-group" role="group" aria-label="Run and Submit Controls">
+        <button id="btn-top-run" class="btn-top-run" title="Run Samples (Ctrl + ')">
+          <i data-lucide="play"></i>
+          <span>Run</span>
+        </button>
+        <button id="btn-top-submit" class="btn-top-submit" title="Submit / Judge All Tests (Ctrl + Enter)">
+          <i data-lucide="cloud-upload"></i>
+          <span>Submit</span>
+        </button>
+        <button id="btn-top-stop" class="btn-top-stop" style="display: none;" title="Stop Judging">
+          <i data-lucide="square"></i>
+          <span>Stop</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Right: Monospace Timer + Mode Pill + Upload -->
     <div class="topbar-right">

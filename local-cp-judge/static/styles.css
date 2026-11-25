@@ -33,7 +33,7 @@
   --radius-control: 8px;
   --radius-card: 10px;
   --radius-pill: 9999px;
-  --header-height: 48px;
+  --header-height: 52px;
   --footer-height: 44px;
 
   /* Semantic Aliases for Legacy / Shared Components */
@@ -143,7 +143,7 @@ body {
 }
 
 /* =====================================================================
-   Slim Top Navigation Bar (48px)
+   Top Navigation Bar (52px, LeetCode-Inspired)
    ===================================================================== */
 
 .topbar {
@@ -154,7 +154,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 16px;
   gap: 12px;
   user-select: none;
   z-index: 20;
@@ -165,6 +165,7 @@ body {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .brand {
@@ -182,9 +183,9 @@ body {
 }
 
 .brand-title {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   color: var(--text-primary);
   white-space: nowrap;
 }
@@ -192,7 +193,8 @@ body {
 .contest-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .select-pill {
@@ -202,10 +204,10 @@ body {
   border-radius: var(--radius-control);
   padding: 0 10px;
   font-family: "Inter", sans-serif;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 500;
-  height: 28px;
-  max-width: 170px;
+  height: 32px;
+  max-width: 190px;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -220,107 +222,170 @@ body {
   border-color: var(--border-strong);
 }
 
-.mobile-problem-select {
-  display: none;
-  max-width: 130px;
-}
-
-/* Segmented Problem Switcher Pill Group (Center) */
-.problem-tabs-pillgroup {
+.problem-nav-group {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: var(--bg-app);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
-  padding: 3px;
-  max-width: 520px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  min-width: 0;
 }
 
-.problem-tabs-pillgroup::-webkit-scrollbar {
-  display: none;
-}
-
-.problem-tab {
+.problem-select-wrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--radius-pill);
-  background-color: transparent;
-  border: 1px solid transparent;
-  color: var(--text-muted);
+  min-width: 0;
+}
+
+.problem-select-wrap .active-dot {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+}
+
+.select-problem-pill {
+  max-width: 225px;
+  padding-left: 24px;
+}
+
+.btn-header-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 9px;
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
   font-family: "Inter", sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.problem-tab:hover {
+.btn-header-nav:hover:not(:disabled) {
   background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
-}
-
-.problem-tab.active {
-  background-color: var(--bg-surface-subtle);
   border-color: var(--border-strong);
   color: var(--text-primary);
-  padding: 0 12px;
+}
+
+.btn-header-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-header-nav [data-lucide] {
+  width: 15px;
+  height: 15px;
 }
 
 .problem-status-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background-color: #52525B;
   flex-shrink: 0;
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.problem-tab.problem-solved .problem-status-dot {
+.problem-status-dot.dot-solved {
   background-color: var(--accent-ac);
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.45);
 }
 
-.problem-tab.problem-attempted .problem-status-dot {
+.problem-status-dot.dot-attempted {
   background-color: var(--accent-wa);
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.45);
 }
 
-.problem-tab-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 210px;
+/* Center Header Execution Group (Run + Submit) */
+.topbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.tab-verdict-tag {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
+.topbar-exec-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+}
+
+.btn-top-run,
+.btn-top-submit,
+.btn-top-stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 6px;
+  font-family: "Inter", sans-serif;
+  font-size: 13.5px;
   font-weight: 600;
-  padding: 1px 5px;
-  border-radius: var(--radius-pill);
-  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
-.tab-verdict-tag.tag-ac {
-  color: #34D399;
+.btn-top-run {
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid transparent;
+  color: var(--text-primary);
+}
+
+.btn-top-run:hover {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+
+.btn-top-run [data-lucide] {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-top-submit {
   background-color: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.34);
+  color: #34D399;
 }
 
-.tab-verdict-tag.tag-wa {
+.btn-top-submit:hover {
+  background-color: rgba(16, 185, 129, 0.24);
+  border-color: rgba(16, 185, 129, 0.55);
+  color: #6EE7B7;
+}
+
+.btn-top-submit [data-lucide] {
+  width: 15px;
+  height: 15px;
+}
+
+.btn-top-stop {
+  background-color: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.45);
   color: #F87171;
-  background-color: rgba(239, 68, 68, 0.14);
+}
+
+.btn-top-stop:hover {
+  background-color: rgba(239, 68, 68, 0.26);
 }
 
 /* Topbar Right: Timer + Practice + Upload */
 .topbar-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -330,15 +395,15 @@ body {
   align-items: center;
   gap: 6px;
   padding: 0 6px;
-  height: 28px;
+  height: 32px;
 }
 
 .timer-display {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
-  min-width: 66px;
+  min-width: 72px;
 }
 
 .contest-timer.running .timer-display {
@@ -372,22 +437,22 @@ body {
 }
 
 .btn-timer-act [data-lucide] {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
 }
 
 .pill-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 11px;
+  height: 32px;
+  padding: 0 12px;
   border-radius: var(--radius-control);
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-family: "Inter", sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -401,13 +466,13 @@ body {
 }
 
 .pill-upload [data-lucide] {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
 }
 
 .btn-toolchain {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--border-subtle);
   background-color: var(--bg-surface-subtle);
   color: var(--text-muted);
@@ -2429,31 +2494,39 @@ body {
    Responsive Rules (< 1024px) — Zero Horizontal Overflow
    ===================================================================== */
 
+@media (max-width: 1240px) {
+  .brand-title {
+    display: none;
+  }
+}
+
 @media (max-width: 1023px) {
   .topbar {
     padding: 0 10px;
     gap: 8px;
   }
 
-  .brand-title {
+  .brand-title,
+  .btn-next-problem span,
+  .contest-timer {
     display: none;
   }
 
-  .problem-tabs-pillgroup {
-    display: none;
-  }
-
-  .mobile-problem-select {
-    display: inline-block;
-  }
-
-  .select-pill {
-    max-width: 140px;
+  .select-pill,
+  .select-problem-pill {
+    max-width: 135px;
+    font-size: 12.5px;
   }
 
   #btn-timer-mode,
   .pill-upload span {
     display: none;
+  }
+
+  .btn-top-run,
+  .btn-top-submit {
+    padding: 0 10px;
+    font-size: 12.5px;
   }
 
   .mobile-pane-switcher {
