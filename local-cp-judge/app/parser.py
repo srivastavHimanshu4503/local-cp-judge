@@ -44,12 +44,29 @@ MONTH_ORDER = {
     "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 }
 
+KNOWN_CONTEST_SCHEDULE: dict[str, tuple[int, int, str]] = {
+    "10sep-contest": (9, 10, "10Sep Contest"),
+    "17sep-contest": (9, 17, "17Sep Contest"),
+    "graph-traversal-problems": (9, 24, "24Sep Contest 3 (Graph Traversal)"),
+    "graph-contest-4": (10, 5, "5Oct Contest 4 (Graph)"),
+    "15oct-contest": (10, 15, "15Oct Contest"),
+    "22oct-contest": (10, 22, "22Oct Contest"),
+    "makeup-contest": (10, 24, "24Oct Makeup Contest"),
+    "29oct-source": (10, 29, "29Oct Source"),
+    "contest-25nov": (11, 25, "25Nov Contest"),
+}
+
 
 def contest_sort_key(contest_id: str) -> tuple:
     """
-    Orders contests chronologically from earliest date (e.g. 10sep before 17sep before 15oct)
-    followed by undated contests in natural alphanumeric order.
+    Orders contests chronologically from earliest date (10 Sep -> 17 Sep -> 24 Sep -> 5 Oct -> ...)
+    followed by any undated future contests in natural alphanumeric order.
     """
+    known = KNOWN_CONTEST_SCHEDULE.get(contest_id.lower())
+    if known:
+        month, day, _ = known
+        return (0, month, day, natural_sort_key(contest_id))
+
     match = re.search(
         r'(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)',
         contest_id.lower(),
@@ -467,7 +484,8 @@ def parse_contest_dir(
     # Sort problems by short_name (A, B, C, D)
     problems.sort(key=lambda p: natural_sort_key(p.short_name))
 
-    clean_title = contest_id.replace('-', ' ').replace('_', ' ').title()
+    known = KNOWN_CONTEST_SCHEDULE.get(contest_id.lower())
+    clean_title = known[2] if known else contest_id.replace('-', ' ').replace('_', ' ').title()
     contest = ContestMeta(
         contest_id=contest_id,
         title=clean_title,
@@ -627,7 +645,10 @@ def extract_and_parse_contest(
 
 
 def _meta_needs_refresh(contest_dir: Path, meta: ContestMeta) -> bool:
-    """Detects stale contest_meta.json missing statement flags or containing removed cpp entries."""
+    """Detects stale contest_meta.json missing statement flags, outdated titles, or removed cpp entries."""
+    known = KNOWN_CONTEST_SCHEDULE.get(meta.contest_id.lower())
+    if known and meta.title != known[2]:
+        return True
     for p in meta.problems:
         if "cpp" in p.files:
             return True

@@ -222,6 +222,10 @@ body {
   border-color: var(--border-strong);
 }
 
+.select-contest-pill {
+  max-width: 220px;
+}
+
 .problem-nav-group {
   display: inline-flex;
   align-items: center;
