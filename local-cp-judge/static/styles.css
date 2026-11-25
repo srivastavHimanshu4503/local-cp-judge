@@ -397,17 +397,78 @@ body {
 .contest-timer {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 6px;
-  height: 32px;
+  gap: 5px;
+  padding: 2px 6px;
+  height: 34px;
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+}
+
+.contest-timer.running {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.contest-timer.is-completed {
+  border-color: rgba(16, 185, 129, 0.5);
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.timer-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+}
+
+.timer-segment-contest {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.timer-segment-contest:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.timer-tag {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.timer-q-tag {
+  color: #60A5FA;
+}
+
+.timer-segment-question.is-solved .timer-q-tag,
+.timer-segment-question.is-solved .timer-display-q,
+.contest-timer.is-completed .timer-segment-contest .timer-display {
+  color: #34D399;
+}
+
+.timer-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .timer-display {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
-  min-width: 76px;
+}
+
+.timer-display-q {
+  color: var(--text-primary);
 }
 
 .contest-timer.running .timer-display {
@@ -2441,6 +2502,117 @@ body {
   margin: 0;
 }
 
+/* Contest & Question Timer Breakdown Modal */
+.timer-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.timer-stat-card {
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timer-stat-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.timer-stat-val {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.timer-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timer-q-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.timer-q-row.active-row {
+  border-color: var(--border-strong);
+  background-color: var(--bg-surface-subtle);
+}
+
+.timer-q-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+}
+
+.timer-q-letter {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #60A5FA;
+  min-width: 20px;
+}
+
+.timer-q-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-q-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.timer-q-split {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.timer-q-time {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 68px;
+  text-align: right;
+}
+
+.timer-modal-footer {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.btn-danger-outline:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #F87171;
+}
+
 .toolchain-item {
   display: flex;
   align-items: center;
@@ -2642,8 +2814,19 @@ body {
    Responsive Rules (< 1024px) — Zero Horizontal Overflow
    ===================================================================== */
 
+@media (max-width: 1360px) {
+  .select-contest-pill,
+  .select-problem-pill {
+    max-width: 175px;
+  }
+}
+
 @media (max-width: 1240px) {
   .brand-title {
+    display: none;
+  }
+
+  .timer-segment-contest .timer-tag {
     display: none;
   }
 }
@@ -2666,7 +2849,6 @@ body {
     font-size: 12.5px;
   }
 
-  #btn-timer-mode,
   .pill-upload span {
     display: none;
   }

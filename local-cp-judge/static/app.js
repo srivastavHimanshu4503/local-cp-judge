@@ -75,9 +75,10 @@ const state = {
   lastCompileError: "",
   timer: {
     mode: "practice", // "practice" or "contest"
+    countdownTargetSec: 7200,
     isRunning: false,
-    elapsedSec: 0,
     intervalId: null,
+    contests: {},
   },
 };
 
@@ -103,14 +104,27 @@ const elements = {
   btnToggleSidebar: document.getElementById("btn-toggle-sidebar"),
   btnCollapseSidebar: document.getElementById("btn-collapse-sidebar"),
 
-  // Contest Timer
+  // Contest & Question Timers
   contestTimer: document.getElementById("contest-timer"),
+  btnTimerBreakdown: document.getElementById("btn-timer-breakdown"),
+  btnTimerDetails: document.getElementById("btn-timer-details"),
   timerDisplay: document.getElementById("timer-display"),
+  questionTimerSegment: document.getElementById("question-timer-segment"),
+  questionTimerLabel: document.getElementById("question-timer-label"),
+  questionTimerDisplay: document.getElementById("question-timer-display"),
   btnTimerToggle: document.getElementById("btn-timer-toggle"),
   timerToggleIcon: document.getElementById("timer-toggle-icon"),
   btnTimerReset: document.getElementById("btn-timer-reset"),
   btnTimerMode: document.getElementById("btn-timer-mode"),
   timerModeBadge: document.getElementById("timer-mode-badge"),
+  timerBreakdownModal: document.getElementById("timer-breakdown-modal"),
+  btnCloseTimerModal: document.getElementById("btn-close-timer-modal"),
+  timerModalTitle: document.getElementById("timer-modal-title"),
+  modalContestTotal: document.getElementById("modal-contest-total"),
+  modalQuestionsSum: document.getElementById("modal-questions-sum"),
+  modalSolvedProgress: document.getElementById("modal-solved-progress"),
+  timerBreakdownList: document.getElementById("timer-breakdown-list"),
+  btnResetContestTimer: document.getElementById("btn-reset-contest-timer"),
 
   // Left Column (Statement & Submissions)
   panePdf: document.getElementById("pane-pdf"),
@@ -1271,21 +1285,180 @@ function initResizers() {
 }
 
 // =====================================================================
-// Contest & Practice Stopwatch / Timer
+// Per-Contest & Per-Question Timers (Persisted per Session)
 // =====================================================================
 
+function getTimersStorageKey() {
+  return `localcp_timers_${SESSION_ID}`;
+}
+
+function loadTimersMap() {
+  try {
+    const raw = localStorage.getItem(getTimersStorageKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        state.timer.mode = parsed.mode === "contest" ? "contest" : "practice";
+        state.timer.contests = parsed.contests && typeof parsed.contests === "object" ? parsed.contests : {};
+      }
+    }
+  } catch (e) {
+    state.timer.contests = {};
+  }
+}
+
+function saveTimersMap() {
+  try {
+    localStorage.setItem(
+      getTimersStorageKey(),
+      JSON.stringify({
+        mode: state.timer.mode,
+        contests: state.timer.contests,
+      })
+    );
+  } catch (e) {}
+}
+
+function ensureContestTimer(contestId = state.activeContestId) {
+  if (!contestId) return null;
+  if (!state.timer.contests[contestId] || typeof state.timer.contests[contestId] !== "object") {
+    state.timer.contests[contestId] = {
+      contestElapsedSec: 0,
+      countdownRemainingSec: state.timer.countdownTargetSec,
+      completed: false,
+      completedAtSec: null,
+      problems: {},
+    };
+  }
+  const cTimer = state.timer.contests[contestId];
+  if (typeof cTimer.contestElapsedSec !== "number") cTimer.contestElapsedSec = 0;
+  if (typeof cTimer.countdownRemainingSec !== "number") cTimer.countdownRemainingSec = state.timer.countdownTargetSec;
+  if (!cTimer.problems || typeof cTimer.problems !== "object") cTimer.problems = {};
+  return cTimer;
+}
+
+function ensureProblemTimer(contestId = state.activeContestId, problemId = state.activeProblemId) {
+  if (!contestId || !problemId) return null;
+  const cTimer = ensureContestTimer(contestId);
+  if (!cTimer.problems[problemId] || typeof cTimer.problems[problemId] !== "object") {
+    cTimer.problems[problemId] = {
+      elapsedSec: 0,
+      solved: false,
+      solvedAtSec: null,
+      contestAtSolveSec: null,
+    };
+  }
+  return cTimer.problems[problemId];
+}
+
+function syncContestSolvedFromStatuses() {
+  if (!state.activeContestId || !state.contestMeta || !state.contestMeta.problems) return;
+  const cTimer = ensureContestTimer(state.activeContestId);
+  let allSolved = state.contestMeta.problems.length > 0;
+  state.contestMeta.problems.forEach((p) => {
+    const pTimer = ensureProblemTimer(state.activeContestId, p.problem_id);
+    const st = state.problemStatuses[p.problem_id];
+    if (st && st.verdict === "AC" && !pTimer.solved) {
+      pTimer.solved = true;
+      pTimer.solvedAtSec = pTimer.elapsedSec;
+    }
+    if (!pTimer.solved) {
+      allSolved = false;
+    }
+  });
+  if (allSolved && !cTimer.completed) {
+    cTimer.completed = true;
+    if (cTimer.completedAtSec === null) {
+      cTimer.completedAtSec = cTimer.contestElapsedSec;
+    }
+  }
+  saveTimersMap();
+}
+
+function markProblemSolvedInTimer(contestId, problemId) {
+  if (!contestId || !problemId) return;
+  const cTimer = ensureContestTimer(contestId);
+  const pTimer = ensureProblemTimer(contestId, problemId);
+  if (!pTimer.solved) {
+    pTimer.solved = true;
+    pTimer.solvedAtSec = pTimer.elapsedSec;
+    pTimer.contestAtSolveSec = cTimer.contestElapsedSec;
+  }
+
+  const contestMeta = state.contestMeta && state.contestMeta.contest_id === contestId
+    ? state.contestMeta
+    : (state.contests || []).find((c) => c.contest_id === contestId);
+
+  if (contestMeta && Array.isArray(contestMeta.problems) && contestMeta.problems.length > 0) {
+    const everySolved = contestMeta.problems.every((p) => {
+      const pt = ensureProblemTimer(contestId, p.problem_id);
+      const st = (contestId === state.activeContestId) ? state.problemStatuses[p.problem_id] : null;
+      return Boolean(pt.solved || (st && st.verdict === "AC"));
+    });
+    if (everySolved) {
+      cTimer.completed = true;
+      cTimer.completedAtSec = cTimer.contestElapsedSec;
+      if (state.timer.isRunning && contestId === state.activeContestId) {
+        pauseTimer();
+      }
+    }
+  }
+
+  saveTimersMap();
+  updateTimerDisplay();
+  if (elements.timerBreakdownModal && elements.timerBreakdownModal.style.display === "flex") {
+    renderTimerBreakdownModal();
+  }
+}
+
+function formatDuration(totalSec, alwaysShowHours = true) {
+  const sec = Math.max(0, Math.floor(Number(totalSec) || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (!alwaysShowHours && h === 0) {
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 function initTimer() {
+  loadTimersMap();
+  if (elements.timerModeBadge) {
+    elements.timerModeBadge.textContent = state.timer.mode === "contest" ? "Mode: 2h Contest" : "Mode: Practice";
+  }
   updateTimerDisplay();
 
   if (elements.btnTimerToggle) {
     elements.btnTimerToggle.addEventListener("click", toggleTimer);
   }
   if (elements.btnTimerReset) {
-    elements.btnTimerReset.addEventListener("click", resetTimer);
+    elements.btnTimerReset.addEventListener("click", resetActiveQuestionTimer);
   }
   if (elements.btnTimerMode) {
     elements.btnTimerMode.addEventListener("click", switchTimerMode);
   }
+  if (elements.btnTimerBreakdown) {
+    elements.btnTimerBreakdown.addEventListener("click", openTimerBreakdownModal);
+  }
+  if (elements.btnTimerDetails) {
+    elements.btnTimerDetails.addEventListener("click", openTimerBreakdownModal);
+  }
+  if (elements.btnCloseTimerModal && elements.timerBreakdownModal) {
+    elements.btnCloseTimerModal.addEventListener("click", () => {
+      elements.timerBreakdownModal.style.display = "none";
+    });
+    elements.timerBreakdownModal.addEventListener("click", (e) => {
+      if (e.target === elements.timerBreakdownModal) {
+        elements.timerBreakdownModal.style.display = "none";
+      }
+    });
+  }
+  if (elements.btnResetContestTimer) {
+    elements.btnResetContestTimer.addEventListener("click", () => resetContestTimer());
+  }
+
+  window.addEventListener("beforeunload", saveTimersMap);
 }
 
 function toggleTimer() {
@@ -1297,24 +1470,54 @@ function toggleTimer() {
 }
 
 function startTimer() {
-  if (state.timer.isRunning) return;
+  if (state.timer.isRunning || !state.activeContestId) return;
+  const cTimer = ensureContestTimer(state.activeContestId);
+  if (cTimer && cTimer.completed) {
+    openTimerBreakdownModal();
+    return;
+  }
+  if (state.activeProblemId) {
+    ensureProblemTimer(state.activeContestId, state.activeProblemId);
+  }
+
   state.timer.isRunning = true;
   if (elements.contestTimer) elements.contestTimer.classList.add("running");
   if (elements.timerToggleIcon) elements.timerToggleIcon.setAttribute("data-lucide", "pause");
   refreshIcons();
 
   state.timer.intervalId = setInterval(() => {
+    if (!state.activeContestId) return;
+    const activeContestTimer = ensureContestTimer(state.activeContestId);
+    if (!activeContestTimer) return;
+
     if (state.timer.mode === "practice") {
-      state.timer.elapsedSec++;
+      if (!activeContestTimer.completed) {
+        activeContestTimer.contestElapsedSec++;
+      }
     } else {
-      if (state.timer.elapsedSec > 0) {
-        state.timer.elapsedSec--;
+      if (!activeContestTimer.completed) {
+        activeContestTimer.contestElapsedSec++;
+      }
+      if (activeContestTimer.countdownRemainingSec > 0) {
+        activeContestTimer.countdownRemainingSec--;
       } else {
         pauseTimer();
-        alert("Contest time is up!");
+        alert("2h Contest countdown reached 00:00:00!");
       }
     }
+
+    if (state.activeProblemId) {
+      const pTimer = ensureProblemTimer(state.activeContestId, state.activeProblemId);
+      if (pTimer && !pTimer.solved) {
+        pTimer.elapsedSec++;
+      }
+    }
+
+    saveTimersMap();
     updateTimerDisplay();
+    if (elements.timerBreakdownModal && elements.timerBreakdownModal.style.display === "flex") {
+      renderTimerBreakdownModal();
+    }
   }, 1000);
 }
 
@@ -1324,48 +1527,96 @@ function pauseTimer() {
   state.timer.intervalId = null;
   if (elements.contestTimer) elements.contestTimer.classList.remove("running");
   if (elements.timerToggleIcon) elements.timerToggleIcon.setAttribute("data-lucide", "play");
+  saveTimersMap();
   refreshIcons();
 }
 
-function resetTimer() {
-  pauseTimer();
-  if (state.timer.mode === "practice") {
-    state.timer.elapsedSec = 0;
-  } else {
-    state.timer.elapsedSec = 7200; // 2 hours
-  }
+function resetQuestionTimer(contestId = state.activeContestId, problemId = state.activeProblemId) {
+  if (!contestId || !problemId) return;
+  const cTimer = ensureContestTimer(contestId);
+  const pTimer = ensureProblemTimer(contestId, problemId);
+  pTimer.elapsedSec = 0;
+  pTimer.solved = false;
+  pTimer.solvedAtSec = null;
+  pTimer.contestAtSolveSec = null;
+  cTimer.completed = false;
+  cTimer.completedAtSec = null;
+  saveTimersMap();
   updateTimerDisplay();
+  if (elements.timerBreakdownModal && elements.timerBreakdownModal.style.display === "flex") {
+    renderTimerBreakdownModal();
+  }
+}
+
+function resetActiveQuestionTimer() {
+  if (!state.activeContestId || !state.activeProblemId) return;
+  resetQuestionTimer(state.activeContestId, state.activeProblemId);
+}
+
+function resetContestTimer(contestId = state.activeContestId) {
+  if (!contestId) return;
+  if (!confirm("Reset the Contest Timer and all individual question timers for this contest?")) {
+    return;
+  }
+  pauseTimer();
+  state.timer.contests[contestId] = {
+    contestElapsedSec: 0,
+    countdownRemainingSec: state.timer.countdownTargetSec,
+    completed: false,
+    completedAtSec: null,
+    problems: {},
+  };
+  saveTimersMap();
+  updateTimerDisplay();
+  if (elements.timerBreakdownModal && elements.timerBreakdownModal.style.display === "flex") {
+    renderTimerBreakdownModal();
+  }
 }
 
 function switchTimerMode() {
-  pauseTimer();
-  if (state.timer.mode === "practice") {
-    state.timer.mode = "contest";
-    state.timer.elapsedSec = 7200; // 2 hours
-    if (elements.timerModeBadge) elements.timerModeBadge.textContent = "2h Contest";
-  } else {
-    state.timer.mode = "practice";
-    state.timer.elapsedSec = 0;
-    if (elements.timerModeBadge) elements.timerModeBadge.textContent = "Practice";
+  state.timer.mode = state.timer.mode === "practice" ? "contest" : "practice";
+  if (elements.timerModeBadge) {
+    elements.timerModeBadge.textContent = state.timer.mode === "contest" ? "Mode: 2h Contest" : "Mode: Practice";
   }
+  saveTimersMap();
   updateTimerDisplay();
 }
 
 function updateTimerDisplay() {
-  if (!elements.timerDisplay) return;
-  const totalSec = state.timer.elapsedSec;
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  const formatted = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  elements.timerDisplay.textContent = formatted;
+  const cTimer = state.activeContestId ? ensureContestTimer(state.activeContestId) : null;
+  const pTimer = (state.activeContestId && state.activeProblemId)
+    ? ensureProblemTimer(state.activeContestId, state.activeProblemId)
+    : null;
+
+  if (elements.timerDisplay) {
+    const shownContestSec = cTimer
+      ? (state.timer.mode === "contest" ? cTimer.countdownRemainingSec : cTimer.contestElapsedSec)
+      : 0;
+    elements.timerDisplay.textContent = formatDuration(shownContestSec, true);
+  }
+
+  if (elements.questionTimerLabel) {
+    const shortName = state.activeProblem && state.activeProblem.short_name
+      ? state.activeProblem.short_name
+      : "-";
+    elements.questionTimerLabel.textContent = `Q·${shortName}`;
+  }
+  if (elements.questionTimerDisplay) {
+    const qSec = pTimer ? pTimer.elapsedSec : 0;
+    elements.questionTimerDisplay.textContent = formatDuration(qSec, false);
+  }
+  if (elements.questionTimerSegment) {
+    elements.questionTimerSegment.classList.toggle("is-solved", Boolean(pTimer && pTimer.solved));
+  }
 
   if (elements.contestTimer) {
-    if (state.timer.mode === "contest") {
-      if (totalSec < 300) {
+    elements.contestTimer.classList.toggle("is-completed", Boolean(cTimer && cTimer.completed));
+    if (cTimer && state.timer.mode === "contest") {
+      const rem = cTimer.countdownRemainingSec;
+      if (rem < 300) {
         elements.contestTimer.classList.add("danger");
         elements.contestTimer.classList.remove("warning");
-      } else if (totalSec < 900) {
+      } else if (rem < 900) {
         elements.contestTimer.classList.add("warning");
         elements.contestTimer.classList.remove("danger");
       } else {
@@ -1375,6 +1626,93 @@ function updateTimerDisplay() {
       elements.contestTimer.classList.remove("warning", "danger");
     }
   }
+}
+
+function openTimerBreakdownModal() {
+  if (!elements.timerBreakdownModal) return;
+  renderTimerBreakdownModal();
+  elements.timerBreakdownModal.style.display = "flex";
+  refreshIcons();
+}
+
+function renderTimerBreakdownModal() {
+  if (!elements.timerBreakdownList || !state.activeContestId) return;
+  const cTimer = ensureContestTimer(state.activeContestId);
+  const problems = (state.contestMeta && Array.isArray(state.contestMeta.problems))
+    ? state.contestMeta.problems
+    : [];
+
+  if (elements.timerModalTitle) {
+    const title = state.contestMeta ? state.contestMeta.title : state.activeContestId;
+    elements.timerModalTitle.textContent = `Time Breakdown — ${title}`;
+  }
+
+  let qSum = 0;
+  let solvedCount = 0;
+  problems.forEach((p) => {
+    const pTimer = ensureProblemTimer(state.activeContestId, p.problem_id);
+    qSum += Number(pTimer.elapsedSec || 0);
+    if (pTimer.solved) solvedCount++;
+  });
+
+  if (elements.modalContestTotal) {
+    elements.modalContestTotal.textContent = formatDuration(cTimer ? cTimer.contestElapsedSec : 0, true);
+  }
+  if (elements.modalQuestionsSum) {
+    elements.modalQuestionsSum.textContent = formatDuration(qSum, true);
+  }
+  if (elements.modalSolvedProgress) {
+    const suffix = cTimer && cTimer.completed ? " (Completed!)" : "";
+    elements.modalSolvedProgress.textContent = `${solvedCount} / ${problems.length} Solved${suffix}`;
+  }
+
+  elements.timerBreakdownList.innerHTML = "";
+  problems.forEach((p) => {
+    const pTimer = ensureProblemTimer(state.activeContestId, p.problem_id);
+    const statusData = state.problemStatuses[p.problem_id];
+    const isActive = p.problem_id === state.activeProblemId;
+    const isSolved = Boolean(pTimer.solved || (statusData && statusData.verdict === "AC"));
+
+    let badgeHtml = `<span class="verdict-badge verdict-empty">Pending</span>`;
+    if (isSolved) {
+      badgeHtml = `<span class="verdict-badge verdict-ac">AC</span>`;
+    } else if (statusData && statusData.verdict) {
+      badgeHtml = `<span class="verdict-badge ${getVerdictClass(statusData.verdict)}">${escapeHtml(statusData.verdict)}</span>`;
+    }
+
+    const splitText = isSolved && pTimer.contestAtSolveSec !== null && pTimer.contestAtSolveSec !== undefined
+      ? `Solved @ ${formatDuration(pTimer.contestAtSolveSec, true)}`
+      : (isActive && state.timer.isRunning && !isSolved ? "Running..." : (isSolved ? "Solved" : ""));
+
+    const row = document.createElement("div");
+    row.className = `timer-q-row${isActive ? " active-row" : ""}`;
+    row.innerHTML = `
+      <div class="timer-q-main" title="Jump to ${escapeHtml(p.name)}">
+        <span class="timer-q-letter">${escapeHtml(p.short_name)}</span>
+        <span class="timer-q-name">${escapeHtml(p.name)}</span>
+        ${badgeHtml}
+      </div>
+      <div class="timer-q-meta">
+        ${splitText ? `<span class="timer-q-split">${escapeHtml(splitText)}</span>` : ""}
+        <span class="timer-q-time">${formatDuration(pTimer.elapsedSec, false)}</span>
+        <button type="button" class="btn btn-xs btn-outline-subtle btn-reset-q-timer" title="Reset Question ${escapeHtml(p.short_name)} Timer">Reset</button>
+      </div>
+    `;
+
+    row.querySelector(".timer-q-main").addEventListener("click", async () => {
+      elements.timerBreakdownModal.style.display = "none";
+      if (p.problem_id !== state.activeProblemId) {
+        await selectProblem(p.problem_id);
+      }
+    });
+
+    row.querySelector(".btn-reset-q-timer").addEventListener("click", (e) => {
+      e.stopPropagation();
+      resetQuestionTimer(state.activeContestId, p.problem_id);
+    });
+
+    elements.timerBreakdownList.appendChild(row);
+  });
 }
 // =====================================================================
 
@@ -1453,6 +1791,10 @@ async function loadContestsList() {
 
 async function selectContest(contestId) {
   try {
+    if (state.activeContestId && state.activeContestId !== contestId && state.timer.isRunning) {
+      pauseTimer();
+    }
+
     const res = await fetch(`/api/contests/${contestId}`);
     if (!res.ok) throw new Error("Contest not found");
     const contestMeta = await res.json();
@@ -1462,10 +1804,13 @@ async function selectContest(contestId) {
     elements.contestSelect.value = contestId;
 
     loadProblemStatuses();
+    syncContestSolvedFromStatuses();
     renderProblemTabs(contestMeta.problems);
 
     if (contestMeta.problems.length > 0) {
       await selectProblem(contestMeta.problems[0].problem_id);
+    } else {
+      updateTimerDisplay();
     }
   } catch (err) {
     console.error("Failed to select contest:", err);
@@ -1567,6 +1912,7 @@ async function selectProblem(problemId) {
   state.activeSubmissionId = null;
   setLeftTab("description");
   updateLeftSubmissionsBadge();
+  updateTimerDisplay();
 
   // Load code from disk
   await loadActiveCode();
@@ -1849,6 +2195,9 @@ async function startJudging(suite) {
     elements.progressStageText.textContent = `Completed — ${summary.passed} of ${summary.total} Passed`;
     renderLeetCodeResult(summary);
     if (executedSuite !== "sample") {
+      if (executedSuite === "all" && summary.overall_verdict === "AC") {
+        markProblemSolvedInTimer(runContestId, runProblemId);
+      }
       const recorded = recordRunHistory({
         contestId: runContestId,
         problemId: runProblemId,

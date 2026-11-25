@@ -71,21 +71,28 @@
       </div>
     </div>
 
-    <!-- Right: Monospace Timer + Mode Pill + Upload -->
+    <!-- Right: Contest + Question Dual Timer + Upload + Toolchains -->
     <div class="topbar-right">
-      <div class="contest-timer" id="contest-timer">
-        <span id="timer-display" class="timer-display">00:00:00</span>
-        <button id="btn-timer-toggle" class="btn-timer-act" title="Start / Pause Stopwatch">
+      <div class="contest-timer dual-timer-pill" id="contest-timer">
+        <button type="button" id="btn-timer-breakdown" class="timer-segment timer-segment-contest" title="Total Contest Time (Click for per-question breakdown &amp; contest reset)">
+          <span class="timer-tag">Contest</span>
+          <span id="timer-display" class="timer-display">00:00:00</span>
+        </button>
+        <span class="timer-divider" aria-hidden="true"></span>
+        <div id="question-timer-segment" class="timer-segment timer-segment-question" title="Active Question Time (Freezes when solved)">
+          <span id="question-timer-label" class="timer-tag timer-q-tag">Q·A</span>
+          <span id="question-timer-display" class="timer-display timer-display-q">00:00</span>
+        </div>
+        <button type="button" id="btn-timer-toggle" class="btn-timer-act" title="Start / Pause Contest &amp; Question Timer">
           <i data-lucide="play" id="timer-toggle-icon"></i>
         </button>
-        <button id="btn-timer-reset" class="btn-timer-act" title="Reset Stopwatch">
+        <button type="button" id="btn-timer-reset" class="btn-timer-act" title="Reset Current Question Timer">
           <i data-lucide="rotate-ccw"></i>
         </button>
+        <button type="button" id="btn-timer-details" class="btn-timer-act" title="View Contest &amp; Question Time Breakdown">
+          <i data-lucide="bar-chart-2"></i>
+        </button>
       </div>
-
-      <button id="btn-timer-mode" class="pill-control" title="Switch Mode: Practice (Count Up) / 2h Contest">
-        <span id="timer-mode-badge">Practice</span>
-      </button>
 
       <button id="btn-upload" class="pill-control pill-upload" title="Import DOMjudge / ICPC Contest Archive (.zip)">
         <i data-lucide="upload"></i>
@@ -825,6 +832,48 @@
       <div class="modal-footer">
         <button id="btn-copy-full-output" class="btn btn-outline-subtle">
           <i data-lucide="copy"></i> Copy Output
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contest & Question Time Breakdown Modal -->
+  <div id="timer-breakdown-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="clock"></i>
+          <span id="timer-modal-title">Contest Time Breakdown</span>
+        </div>
+        <button id="btn-close-timer-modal" class="btn-icon" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body modal-body-tall">
+        <div class="timer-summary-grid">
+          <div class="timer-stat-card">
+            <span class="timer-stat-label">Contest Total</span>
+            <strong id="modal-contest-total" class="timer-stat-val tabular-nums">00:00:00</strong>
+          </div>
+          <div class="timer-stat-card">
+            <span class="timer-stat-label">Question Sum</span>
+            <strong id="modal-questions-sum" class="timer-stat-val tabular-nums">00:00:00</strong>
+          </div>
+          <div class="timer-stat-card">
+            <span class="timer-stat-label">Contest Progress</span>
+            <strong id="modal-solved-progress" class="timer-stat-val tabular-nums">0 / 0 Solved</strong>
+          </div>
+        </div>
+
+        <div id="timer-breakdown-list" class="timer-breakdown-list"></div>
+      </div>
+      <div class="modal-footer timer-modal-footer">
+        <button id="btn-timer-mode" class="pill-control" title="Switch Mode: Practice (Count Up) / 2h Contest">
+          <span id="timer-mode-badge">Mode: Practice</span>
+        </button>
+        <button id="btn-reset-contest-timer" class="btn btn-outline-subtle btn-danger-outline" title="Reset Contest Timer &amp; All Question Timers for This Contest">
+          <i data-lucide="rotate-ccw"></i>
+          <span>Reset Entire Contest</span>
         </button>
       </div>
     </div>
