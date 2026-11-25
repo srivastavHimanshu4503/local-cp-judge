@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>Problem A — Alternating Sequences</title>
+  
+<style>
+  /* obsidian-statement-theme */
+  :root {
+    --bg-app: #09090B;
+    --bg-panel: #111115;
+    --bg-surface-subtle: #18181B;
+    --bg-surface-hover: #1F1F24;
+    --border-subtle: #27272A;
+    --border-strong: #3F3F46;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --accent-ac: #10B981;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #27272A transparent;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-secondary);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 24px 28px 36px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .statement-container {
+    max-width: 72ch;
+  }
+  a { color: var(--text-muted); text-decoration: none; }
+  a:hover { color: var(--text-primary); }
+
+  /* Metadata Strip: Uniform Muted Monochrome Chips */
+  .meta-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  /* Title Row */
+  .title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+  .source-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+    white-space: nowrap;
+  }
+  .source-link:hover {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .section-block {
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #E4E4E7;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+  p { margin-bottom: 10px; max-width: 68ch; }
+  ul, ol { margin-left: 18px; margin-bottom: 12px; max-width: 68ch; }
+  li { margin-bottom: 4px; }
+  strong { color: #E4E4E7; font-weight: 600; }
+
+  code {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #E4E4E7;
+  }
+  pre {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 13px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    color: var(--text-primary);
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+
+  /* Side-by-Side Example Cards */
+  .example-wrapper {
+    margin-bottom: 16px;
+  }
+  .example-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 600px) {
+    .example-grid { grid-template-columns: 1fr; }
+  }
+  .io-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .io-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(39, 39, 42, 0.6);
+  }
+  .io-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E4E4E7;
+  }
+  .btn-copy-sample {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .btn-copy-sample:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+  }
+  .btn-copy-sample.copied {
+    color: var(--accent-ac);
+  }
+  .io-card pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+  .example-explanation {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .dp-analysis-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 24px;
+  }
+  .dp-analysis-card pre {
+    background: var(--bg-app);
+  }
+</style>
+
+</head>
+<body>
+  <div class="statement-container">
+    <div class="meta-chips">
+      <span class="meta-chip">SPOJ</span>
+      <span class="meta-chip">DP (Modified LIS)</span>
+      <span class="meta-chip">2.0s</span>
+      <span class="meta-chip">1024MB</span>
+    </div>
+
+    <div class="title-row">
+      <h1>Problem A — Alternating Sequences</h1>
+      <a class="source-link" href="https://www.spoj.com/problems/ALTSEQ/" target="_blank" rel="noopener noreferrer">
+        <span>View on SPOJ</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </a>
+    </div>
+
+    <div class="section-block">
+      <h2>Problem Statement</h2>
+      
+<p>Given an array <em>a</em> of <em>N</em> non-zero integers (<em>a</em><sub>1</sub>, <em>a</em><sub>2</sub>, ..., <em>a<sub>N</sub></em>), find the length of the longest alternating subsequence.</p>
+<p>An alternating sequence <em>b</em><sub>1</sub>, <em>b</em><sub>2</sub>, ..., <em>b<sub>k</sub></em> (<em>k</em> &ge; 1) must satisfy two conditions:</p>
+<ol>
+  <li><strong>Strictly increasing absolute values:</strong> |<em>b</em><sub>1</sub>| &lt; |<em>b</em><sub>2</sub>| &lt; |<em>b</em><sub>3</sub>| &lt; ... &lt; |<em>b<sub>k</sub></em>|</li>
+  <li><strong>Strictly alternating signs:</strong> Adjacent elements must have opposite signs. That is, if <em>b</em><sub>1</sub> &gt; 0, then <em>b</em><sub>2</sub> &lt; 0, <em>b</em><sub>3</sub> &gt; 0, and so on (or vice versa).</li>
+</ol>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Input Format</h2>
+      
+<p>The first line contains a single integer <em>N</em>. The second line contains <em>N</em> space-separated integers <em>a</em><sub>1</sub>, <em>a</em><sub>2</sub>, ..., <em>a<sub>N</sub></em>.</p>
+<pre>N
+a_1 a_2 ... a_N</pre>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Output Format</h2>
+      
+<p>Print a single integer: the length of the longest alternating subsequence.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Constraints</h2>
+      
+<ul>
+  <li>1 &le; <em>N</em> &le; 5000</li>
+  <li>|<em>a<sub>i</sub></em>| &le; 10<sup>9</sup></li>
+  <li><em>a<sub>i</sub></em> &ne; 0</li>
+</ul>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Examples</h2>
+      
+<div class="example-wrapper">
+  <div class="example-grid">
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Input</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>8
+1 2 -2 -3 5 -7 -8 10</pre>
+    </div>
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Output</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>5</pre>
+    </div>
+  </div>
+  <div class="example-explanation">
+    <strong>Explanation:</strong> Consider the subsequence <code>[1, -2, 5, -7, 10]</code>:<br>• Magnitudes: |1| = 1 &lt; |-2| = 2 &lt; |5| = 5 &lt; |-7| = 7 &lt; |10| = 10 (strictly increasing).<br>• Signs: +1, -2, +5, -7, +10 (alternates: positive, negative, positive, negative, positive).<br>Length = <strong>5</strong>. (Another valid candidate of length 5 is <code>[2, -3, 5, -7, 10]</code>).
+  </div>
+</div>
+
+    </div>
+
+    <div class="dp-analysis-card">
+      
+<h3>Dynamic Programming Breakdown</h3>
+<p>This problem is a variant of the classic <strong>Longest Increasing Subsequence (LIS)</strong> problem:</p>
+<p><strong>State Definition:</strong> Let <code>dp[i]</code> be the length of the longest alternating subsequence ending at index <code>i</code>.</p>
+<p><strong>Base Case:</strong> Initialize <code>dp[i] = 1</code> for all <code>i</code> (each individual element forms a valid sequence of length 1).</p>
+<p><strong>Transitions:</strong> For each index <code>i</code> from 0 to <code>N - 1</code>, examine every preceding index <code>j &lt; i</code>:</p>
+<pre>if abs(a[j]) < abs(a[i]) and ((a[j] > 0 and a[i] < 0) or (a[j] < 0 and a[i] > 0)):
+    dp[i] = max(dp[i], dp[j] + 1)</pre>
+<p><strong>Complexity:</strong> Time: O(N<sup>2</sup>) &bull; Space: O(N). With N = 5000, 2.5 &times; 10<sup>7</sup> iterations comfortably executes within the 2.0s limit.</p>
+
+    </div>
+  </div>
+  <script>
+    function copyPre(btn) {
+      var card = btn.closest('.io-card');
+      var pre = card ? card.querySelector('pre') : null;
+      if (!pre || !navigator.clipboard) return;
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        var label = btn.querySelector('span');
+        if (label) label.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          if (label) label.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    }
+  </script>
+</body>
+</html>

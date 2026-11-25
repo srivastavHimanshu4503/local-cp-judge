@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlgoLens — Visual Recursion, Dynamic Programming & Graph Studio</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --bg-card: #131c31;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-indigo: #6366f1;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-purple: #a855f7;
+      --border-color: #334155;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Header */
+    header {
+      background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Category Tabs */
+    .category-tabs {
+      display: flex;
+      background: var(--bg-primary);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      gap: 4px;
+    }
+
+    .cat-btn {
+      background: transparent;
+      color: var(--text-secondary);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cat-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .cat-btn.active {
+      background: var(--accent-indigo);
+      color: white;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Toolbar / Controls Bar */
+    .toolbar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    label.ctrl-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    select, input[type="text"], input[type="number"] {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: var(--font-sans);
+      outline: none;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .btn {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 7px 13px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #475569;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #0f172a;
+      border-color: var(--accent-blue);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #7dd3fc;
+    }
+
+    .btn-emerald {
+      background: var(--accent-emerald);
+      color: #052e16;
+      border-color: var(--accent-emerald);
+    }
+
+    .speed-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent-blue);
+      cursor: pointer;
+    }
+
+    /* Main Workspace Grid */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      gap: 16px;
+      padding: 16px 24px;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      background: rgba(30, 41, 59, 0.7);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    /* Left Visual Canvas Area */
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      overflow: auto;
+    }
+
+    /* Step Narrative Banner */
+    .step-banner {
+      background: rgba(30, 41, 59, 0.9);
+      border-left: 4px solid var(--accent-blue);
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .step-text {
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--text-primary);
+    }
+
+    .step-counter {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-blue);
+      white-space: nowrap;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding-top: 12px;
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    /* Right Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* State / Stack / Queue Inspector */
+    .state-box {
+      padding: 14px;
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stack-frame {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--accent-indigo);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stack-frame.active {
+      border-left-color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    /* Code Viewer */
+    .code-box {
+      padding: 12px 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.65;
+      overflow-x: auto;
+      background: #0b1120;
+    }
+
+    .code-line {
+      padding: 2px 16px;
+      display: flex;
+      gap: 12px;
+      color: #94a3b8;
+      white-space: pre;
+    }
+
+    .code-line.highlight {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fef08a;
+      border-left: 3px solid var(--accent-amber);
+    }
+
+    .line-num {
+      color: #475569;
+      user-select: none;
+      width: 20px;
+      text-align: right;
+    }
+
+    /* Complexity & Concept Card */
+    .info-box {
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-card {
+      background: var(--bg-secondary);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-emerald);
+      margin-top: 2px;
+    }
+
+    /* DP Grid Table Styling */
+    .dp-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    table.dp-table {
+      border-collapse: separate;
+      border-spacing: 4px;
+    }
+
+    table.dp-table th {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    table.dp-table td {
+      width: 52px;
+      height: 46px;
+      text-align: center;
+      vertical-align: middle;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    table.dp-table td.cell-current {
+      background: rgba(245, 158, 11, 0.25);
+      border: 2px solid var(--accent-amber);
+      color: #fef08a;
+      transform: scale(1.06);
+      z-index: 2;
+    }
+
+    table.dp-table td.cell-dep {
+      background: rgba(56, 189, 248, 0.22);
+      border: 2px solid var(--accent-blue);
+      color: #e0f2fe;
+    }
+
+    table.dp-table td.cell-computed {
+      background: rgba(16, 185, 129, 0.14);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #a7f3d0;
+    }
+
+    table.dp-table td.cell-optimal {
+      background: rgba(168, 85, 247, 0.3);
+      border: 2px solid var(--accent-purple);
+      color: #f3e8ff;
+    }
+
+    .formula-pill {
+      background: #0b1120;
+      border: 1px solid var(--border-color);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent-blue);
+    }
+
+    /* SVG Stage */
+    .svg-stage {
+      flex: 1;
+      width: 100%;
+      min-height: 390px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border-radius: 8px;
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      overflow: auto;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      min-height: 390px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">A</div>
+      <div>
+        <h1>AlgoLens Interactive Studio</h1>
+        <p>Step-by-step Visual Execution for Recursion, Dynamic Programming & Graph Algorithms</p>
+      </div>
+    </div>
+
+    <div class="category-tabs">
+      <button class="cat-btn active" onclick="switchCategory('recursion')" id="tab-recursion">
+        <span>🌳</span> Recursion & Backtracking
+      </button>
+      <button class="cat-btn" onclick="switchCategory('dp')" id="tab-dp">
+        <span>🧮</span> Dynamic Programming
+      </button>
+      <button class="cat-btn" onclick="switchCategory('graph')" id="tab-graph">
+        <span>🕸️</span> Graph Algorithms
+      </button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="control-group">
+      <label class="ctrl-label" for="algo-select">Problem:</label>
+      <select id="algo-select" onchange="onProblemChange()"></select>
+
+      <div id="param-controls" class="control-group"></div>
+
+      <button class="btn btn-emerald" onclick="rebuildSimulation()">Run / Reset</button>
+    </div>
+
+    <div class="control-group">
+      <button class="btn" id="btn-prev" onclick="stepBackward()">⏮ Prev</button>
+      <button class="btn btn-primary" id="btn-play" onclick="togglePlay()">▶ Play</button>
+      <button class="btn" id="btn-next" onclick="stepForward()">Next ⏭</button>
+
+      <div class="speed-wrap">
+        <span>Speed:</span>
+        <input type="range" id="speed-slider" min="150" max="1400" step="50" value="700" oninput="updateSpeed()" />
+        <span id="speed-label">1.0x</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="workspace">
+    <!-- Left Visualization Panel -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span id="canvas-title">Recursion Tree & Execution Canvas</span>
+        </div>
+        <span class="badge" id="algo-badge">Top-Down DFS</span>
+      </div>
+
+      <div class="canvas-container">
+        <div class="step-banner">
+          <div class="step-text" id="step-description">Click "Play" or "Next" to step through the algorithm execution.</div>
+          <div class="step-counter" id="step-counter">Step 0 / 0</div>
+        </div>
+
+        <div id="visual-stage" class="svg-stage"></div>
+
+        <div class="legend" id="legend-bar"></div>
+      </div>
+    </section>
+
+    <!-- Right Inspector Sidebar -->
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="inspector-title">Live Call Stack / State</div>
+          <span class="badge" id="inspector-count">0 items</span>
+        </div>
+        <div class="state-box" id="state-inspector"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Synchronized Pseudocode</div>
+        </div>
+        <div class="code-box" id="code-viewer"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Complexity & Intuition</div>
+        </div>
+        <div class="info-box">
+          <div id="algo-intuition"></div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Time Complexity</div>
+              <div class="metric-val" id="time-comp">O(2^n)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Space Complexity</div>
+              <div class="metric-val" id="space-comp">O(n)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // =========================================================================
+    // GLOBAL STATE & CATALOG
+    // =========================================================================
+    let currentCategory = 'recursion';
+    let currentProblem = 'fib';
+    let steps = [];
+    let currentStepIdx = 0;
+    let playTimer = null;
+    let stepDelay = 700;
+
+    const CATALOG = {
+      recursion: [
+        {
+          id: 'fib',
+          name: 'Fibonacci Call Tree (Overlapping Subproblems)',
+          badge: 'Tree Recursion',
+          time: 'O(2^n) unmemoized',
+          space: 'O(n) stack depth',
+          intuition: 'Shows how naive recursion branches into two subcalls fib(n-1) and fib(n-2). Notice the amber duplicate subtrees—visually proving why Memoization / DP saves exponential work.',
+          code: [
+            'function fib(n):',
+            '  if n <= 1: return n',
+            '  left = fib(n - 1)',
+            '  right = fib(n - 2)',
+            '  return left + right'
+          ]
+        },
+        {
+          id: 'subsets',
+          name: 'Subsets / Backtracking Decision Tree',
+          badge: 'Include / Exclude',
+          time: 'O(n · 2^n)',
+          space: 'O(n) path stack',
+          intuition: 'At each index i, we branch left to INCLUDE nums[i] in our current subset, and branch right to EXCLUDE it, backtracking once we hit the leaf base case.',
+          code: [
+            'function dfs(idx, path):',
+            '  if idx == nums.length:',
+            '    result.push([...path]); return',
+            '  path.push(nums[idx])',
+            '  dfs(idx + 1, path)      // Include',
+            '  path.pop()              // Backtrack',
+            '  dfs(idx + 1, path)      // Exclude'
+          ]
+        }
+      ],
+      dp: [
+        {
+          id: 'knapsack',
+          name: '0/1 Knapsack Problem (2D Tabulation)',
+          badge: '2D Bottom-Up DP',
+          time: 'O(N · W)',
+          space: 'O(N · W)',
+          intuition: 'Each cell dp[i][w] decides whether to skip item i (inherit dp[i-1][w] directly above) or take item i (val[i] + dp[i-1][w - wt[i]]). Blue cells highlight the exact dependencies compared.',
+          code: [
+            'for i = 1 to N:',
+            '  for w = 0 to W:',
+            '    if wt[i] <= w:',
+            '      dp[i][w] = max(dp[i-1][w], val[i] + dp[i-1][w-wt[i]])',
+            '    else:',
+            '      dp[i][w] = dp[i-1][w]',
+            'return dp[N][W]'
+          ]
+        },
+        {
+          id: 'coinchange',
+          name: 'Coin Change — Minimum Coins (1D Tabulation)',
+          badge: '1D Unbounded DP',
+          time: 'O(Amount · |Coins|)',
+          space: 'O(Amount)',
+          intuition: 'For each target amount a from 1..Amount, we try every coin c and check if dp[a - c] + 1 improves our minimum coin count for dp[a].',
+          code: [
+            'dp[0] = 0; dp[1..amount] = INF',
+            'for a = 1 to amount:',
+            '  for coin in coins:',
+            '    if a - coin >= 0:',
+            '      dp[a] = min(dp[a], 1 + dp[a - coin])',
+            'return dp[amount]'
+          ]
+        },
+        {
+          id: 'lcs',
+          name: 'Longest Common Subsequence (2D String DP)',
+          badge: 'String Alignment DP',
+          time: 'O(M · N)',
+          space: 'O(M · N)',
+          intuition: 'When characters s1[i-1] == s2[j-1] match, we extend the diagonal subsequence (1 + dp[i-1][j-1]). Otherwise, we take max(top, left). Purple cells trace back the optimal LCS string!',
+          code: [
+            'for i = 1 to m:',
+            '  for j = 1 to n:',
+            '    if s1[i-1] == s2[j-1]:',
+            '      dp[i][j] = 1 + dp[i-1][j-1]',
+            '    else:',
+            '      dp[i][j] = max(dp[i-1][j], dp[i][j-1])'
+          ]
+        }
+      ],
+      graph: [
+        {
+          id: 'bfs',
+          name: 'Breadth-First Search (Shortest Unweighted Path)',
+          badge: 'FIFO Queue Traversal',
+          time: 'O(V + E)',
+          space: 'O(V) queue',
+          intuition: 'BFS explores the graph in concentric distance waves using a FIFO Queue. The first time target node F is popped, we are guaranteed the shortest unweighted path.',
+          code: [
+            'queue.enqueue(start); visited.add(start)',
+            'while queue not empty:',
+            '  u = queue.dequeue()',
+            '  for v in neighbors(u):',
+            '    if v not in visited:',
+            '      visited.add(v); parent[v] = u',
+            '      queue.enqueue(v)'
+          ]
+        },
+        {
+          id: 'dfs',
+          name: 'Depth-First Search & Backtracking Traversal',
+          badge: 'LIFO Stack / Recursion',
+          time: 'O(V + E)',
+          space: 'O(V) call stack',
+          intuition: 'DFS plunges deep along each branch before backtracking. Watch the Call Stack push active vertices and unwind in reverse order when a vertex has no unvisited neighbors.',
+          code: [
+            'function dfs(u):',
+            '  visited.add(u)',
+            '  for v in neighbors(u):',
+            '    if v not in visited:',
+            '      dfs(v)',
+            '  // Backtrack from u'
+          ]
+        },
+        {
+          id: 'dijkstra',
+          name: "Dijkstra's Shortest Path Algorithm (Weighted)",
+          badge: 'Greedy Priority Queue',
+          time: 'O((V + E) log V)',
+          space: 'O(V) min-heap',
+          intuition: 'Always expands the unvisited vertex u with the smallest known tentative distance dist[u], relaxing outgoing edges where dist[u] + weight(u,v) < dist[v].',
+          code: [
+            'dist[start] = 0; pq.push((0, start))',
+            'while pq not empty:',
+            '  (d, u) = pq.popMin()',
+            '  for (v, w) in adj[u]:',
+            '    if dist[u] + w < dist[v]:',
+            '      dist[v] = dist[u] + w; parent[v] = u',
+            '      pq.push((dist[v], v))'
+          ]
+        }
+      ]
+    };
+
+    // =========================================================================
+    // UI INITIALIZATION & CONTROLS
+    // =========================================================================
+    function switchCategory(cat) {
+      stopPlay();
+      currentCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + cat).classList.add('active');
+
+      const select = document.getElementById('algo-select');
+      select.innerHTML = '';
+      CATALOG[cat].forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.name;
+        select.appendChild(opt);
+      });
+
+      currentProblem = CATALOG[cat][0].id;
+      renderParamControls();
+      rebuildSimulation();
+    }
+
+    function onProblemChange() {
+      stopPlay();
+      currentProblem = document.getElementById('algo-select').value;
+      renderParamControls();
+      rebuildSimulation();
+    }
+
+    function renderParamControls() {
+      const container = document.getElementById('param-controls');
+      container.innerHTML = '';
+
+      if (currentProblem === 'fib') {
+        container.innerHTML = `
+          <label class="ctrl-label">N:</label>
+          <input type="number" id="param-fib-n" min="2" max="6" value="4" style="width:64px" />
+        `;
+      } else if (currentProblem === 'subsets') {
+        container.innerHTML = `
+          <label class="ctrl-label">Array:</label>
+          <input type="text" id="param-subsets-arr" value="1, 2, 3" style="width:100px" />
+        `;
+      } else if (currentProblem === 'knapsack') {
+        container.innerHTML = `
+          <label class="ctrl-label">Capacity W:</label>
+          <input type="number" id="param-knap-w" min="3" max="8" value="5" style="width:64px" />
+        `;
+      } else if (currentProblem === 'coinchange') {
+        container.innerHTML = `
+          <label class="ctrl-label">Coins:</label>
+          <input type="text" id="param-coins" value="1, 3, 4" style="width:90px" />
+          <label class="ctrl-label">Target:</label>
+          <input type="number" id="param-amount" min="3" max="10" value="6" style="width:64px" />
+        `;
+      } else if (currentProblem === 'lcs') {
+        container.innerHTML = `
+          <label class="ctrl-label">S1:</label>
+          <input type="text" id="param-s1" value="ACDBE" maxlength="6" style="width:82px" />
+          <label class="ctrl-label">S2:</label>
+          <input type="text" id="param-s2" value="ABCDE" maxlength="6" style="width:82px" />
+        `;
+      } else if (currentCategory === 'graph') {
+        container.innerHTML = `
+          <label class="ctrl-label">Start:</label>
+          <select id="param-start">
+            <option value="A" selected>Node A</option>
+            <option value="B">Node B</option>
+            <option value="C">Node C</option>
+          </select>
+          <label class="ctrl-label">Target:</label>
+          <select id="param-target">
+            <option value="F" selected>Node F</option>
+            <option value="E">Node E</option>
+            <option value="D">Node D</option>
+          </select>
+        `;
+      }
+    }
+
+    function updateMetadata() {
+      const meta = CATALOG[currentCategory].find(x => x.id === currentProblem);
+      document.getElementById('canvas-title').textContent = meta.name;
+      document.getElementById('algo-badge').textContent = meta.badge;
+      document.getElementById('time-comp').textContent = meta.time;
+      document.getElementById('space-comp').textContent = meta.space;
+      document.getElementById('algo-intuition').textContent = meta.intuition;
+
+      const codeViewer = document.getElementById('code-viewer');
+      codeViewer.innerHTML = meta.code.map((line, i) => `
+        <div class="code-line" id="code-line-${i}">
+          <span class="line-num">${i + 1}</span>
+          <span>${line.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+        </div>
+      `).join('');
+
+      const legend = document.getElementById('legend-bar');
+      if (currentCategory === 'recursion') {
+        document.getElementById('inspector-title').textContent = 'Live Call Stack (LIFO)';
+        legend.innerHTML = `
+          <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> Active Call Frame</div>
+          <div class="legend-item"><span class="dot" style="background:#38bdf8"></span> On Call Stack</div>
+          <div class="legend-item"><span class="dot" style="background:#10b981"></span> Returned / Solved</div>
+          <div class="legend-item"><span class="dot" style="background:#f43f5e"></span> Duplicate Subproblem</div>
+        `;
+      } else if (currentCategory === 'dp') {
+        document.getElementById('inspector-title').textContent = 'State Transition Log';
+        legend.innerHTML = `
+          <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> Current Cell dp[i][j]</div>
+          <div class="legend-item"><span class="dot" style="background:#38bdf8"></span> Dependency Cells Compared</div>
+          <div class="legend-item"><span class="dot" style="background:#10b981"></span> Computed State</div>
+          <div class="legend-item"><span class="dot" style="background:#a855f7"></span> Optimal Backtracked Path</div>
+        `;
+      } else {
+        document.getElementById('inspector-title').textContent =
+          currentProblem === 'bfs' ? 'FIFO Queue & Distances' :
+          currentProblem === 'dfs' ? 'Recursion Stack & Order' : 'Priority Queue & Relaxation';
+        legend.innerHTML = `
+          <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> Current Vertex</div>
+          <div class="legend-item"><span class="dot" style="background:#38bdf8"></span> Frontier (In Queue/Stack)</div>
+          <div class="legend-item"><span class="dot" style="background:#10b981"></span> Visited / Settled</div>
+          <div class="legend-item"><span class="dot" style="background:#a855f7"></span> Shortest / Chosen Path</div>
+        `;
+      }
+    }
+
+    // =========================================================================
+    // STEP GENERATORS FOR EACH ALGORITHM
+    // =========================================================================
+    function rebuildSimulation() {
+      stopPlay();
+      updateMetadata();
+      steps = [];
+      currentStepIdx = 0;
+
+      if (currentProblem === 'fib') generateFibSteps();
+      else if (currentProblem === 'subsets') generateSubsetsSteps();
+      else if (currentProblem === 'knapsack') generateKnapsackSteps();
+      else if (currentProblem === 'coinchange') generateCoinChangeSteps();
+      else if (currentProblem === 'lcs') generateLCSSteps();
+      else if (currentProblem === 'bfs') generateGraphSteps('bfs');
+      else if (currentProblem === 'dfs') generateGraphSteps('dfs');
+      else if (currentProblem === 'dijkstra') generateGraphSteps('dijkstra');
+
+      renderCurrentStep();
+    }
+
+    // 1. FIBONACCI RECURSION TREE
+    function generateFibSteps() {
+      const nInput = document.getElementById('param-fib-n');
+      const N = Math.max(2, Math.min(6, parseInt(nInput ? nInput.value : 4) || 4));
+      if (nInput) nInput.value = N;
+
+      const nodes = [];
+      const edges = [];
+      let idCounter = 0;
+
+      function buildLayout(val, depth, xMin, xMax, parentId) {
+        const id = idCounter++;
+        const x = (xMin + xMax) / 2;
+        const y = 45 + depth * 64;
+        const node = { id, label: `fib(${val})`, val, x, y, status: 'hidden', ret: null, dup: false };
+        nodes.push(node);
+        if (parentId !== null) edges.push({ from: parentId, to: id, status: 'hidden' });
+        if (val > 1) {
+          node.leftId = buildLayout(val - 1, depth + 1, xMin, x, id);
+          node.rightId = buildLayout(val - 2, depth + 1, x, xMax, id);
+        }
+        return id;
+      }
+
+      buildLayout(N, 0, 30, 770, null);
+
+      const stack = [];
+      const computedCounts = {};
+
+      function snap(desc, codeLine, activeId) {
+        steps.push({
+          type: 'tree',
+          desc,
+          codeLine,
+          activeId,
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          edges: JSON.parse(JSON.stringify(edges)),
+          stack: JSON.parse(JSON.stringify(stack))
+        });
+      }
+
+      function sim(id) {
+        const node = nodes[id];
+        node.status = 'active';
+        const edge = edges.find(e => e.to === id);
+        if (edge) edge.status = 'active';
+
+        if (computedCounts[node.val]) {
+          node.dup = true;
+        }
+
+        stack.push({ call: `fib(${node.val})`, state: 'computing...' });
+        snap(
+          `Call fib(${node.val})${node.dup ? ' — Overlapping subproblem already solved earlier!' : ''}`,
+          0,
+          id
+        );
+
+        if (node.val <= 1) {
+          node.ret = node.val;
+          node.status = 'done';
+          computedCounts[node.val] = (computedCounts[node.val] || 0) + 1;
+          stack[stack.length - 1].state = `return ${node.val}`;
+          snap(`Base case reached: fib(${node.val}) returns ${node.val}.`, 1, id);
+          stack.pop();
+          if (edge) edge.status = 'done';
+          return node.val;
+        }
+
+        node.status = 'waiting';
+        snap(`fib(${node.val}) branches left to compute fib(${node.val - 1}).`, 2, id);
+        const lVal = sim(node.leftId);
+
+        node.status = 'active';
+        stack[stack.length - 1].state = `left=${lVal}, calling fib(${node.val - 2})`;
+        snap(`fib(${node.val}) received left=${lVal}; now branches right to compute fib(${node.val - 2}).`, 3, id);
+        const rVal = sim(node.rightId);
+
+        node.status = 'done';
+        node.ret = lVal + rVal;
+        computedCounts[node.val] = (computedCounts[node.val] || 0) + 1;
+        stack[stack.length - 1].state = `return ${lVal} + ${rVal} = ${node.ret}`;
+        snap(`fib(${node.val}) combines ${lVal} + ${rVal} = ${node.ret} and returns to parent.`, 4, id);
+        stack.pop();
+        if (edge) edge.status = 'done';
+        return node.ret;
+      }
+
+      sim(0);
+    }
+
+    // 2. SUBSETS DECISION TREE
+    function generateSubsetsSteps() {
+      const raw = (document.getElementById('param-subsets-arr')?.value || '1, 2, 3')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      const nums = raw.length ? raw : ['1', '2', '3'];
+
+      const nodes = [];
+      const edges = [];
+      let idCounter = 0;
+
+      function buildTree(idx, path, xMin, xMax, parentId, choiceLabel) {
+        const id = idCounter++;
+        const x = (xMin + xMax) / 2;
+        const y = 45 + idx * 78;
+        const node = {
+          id,
+          label: `[${path.join(',')}]`,
+          idx,
+          x,
+          y,
+          status: 'hidden',
+          ret: null,
+          choiceLabel
+        };
+        nodes.push(node);
+        if (parentId !== null) {
+          edges.push({ from: parentId, to: id, status: 'hidden', label: choiceLabel });
+        }
+        if (idx < nums.length) {
+          node.leftId = buildTree(idx + 1, [...path, nums[idx]], xMin, x, id, `+${nums[idx]}`);
+          node.rightId = buildTree(idx + 1, [...path], x, xMax, id, `skip ${nums[idx]}`);
+        }
+        return id;
+      }
+
+      buildTree(0, [], 25, 775, null, '');
+
+      const stack = [];
+      const found = [];
+
+      function snap(desc, codeLine, activeId) {
+        steps.push({
+          type: 'tree',
+          desc,
+          codeLine,
+          activeId,
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          edges: JSON.parse(JSON.stringify(edges)),
+          stack: JSON.parse(JSON.stringify(stack))
+        });
+      }
+
+      function dfs(id, path) {
+        const node = nodes[id];
+        node.status = 'active';
+        const edge = edges.find(e => e.to === id);
+        if (edge) edge.status = 'active';
+
+        stack.push({ call: `dfs(idx=${node.idx}, [${path.join(',')}])`, state: 'exploring' });
+        snap(`Enter dfs(idx=${node.idx}) with current subset [${path.join(', ')}].`, 0, id);
+
+        if (node.idx === nums.length) {
+          node.status = 'done';
+          found.push(`[${path.join(',')}]`);
+          stack[stack.length - 1].state = `emit [${path.join(',')}]`;
+          snap(`Leaf reached! Recorded subset [${path.join(', ')}] (Total found: ${found.length}).`, 2, id);
+          stack.pop();
+          if (edge) edge.status = 'done';
+          return;
+        }
+
+        node.status = 'waiting';
+        snap(`Include nums[${node.idx}] = ${nums[node.idx]} and recurse left.`, 4, id);
+        dfs(node.leftId, [...path, nums[node.idx]]);
+
+        node.status = 'active';
+        snap(`Backtrack (pop ${nums[node.idx]}) and recurse right to exclude nums[${node.idx}].`, 6, id);
+        dfs(node.rightId, [...path]);
+
+        node.status = 'done';
+        stack.pop();
+        if (edge) edge.status = 'done';
+      }
+
+      dfs(0, []);
+    }
+
+    // 3. 0/1 KNAPSACK DP
+    function generateKnapsackSteps() {
+      const wInput = document.getElementById('param-knap-w');
+      const W = Math.max(3, Math.min(8, parseInt(wInput ? wInput.value : 5) || 5));
+      if (wInput) wInput.value = W;
+
+      const items = [
+        { name: 'Item 1', wt: 1, val: 15 },
+        { name: 'Item 2', wt: 3, val: 40 },
+        { name: 'Item 3', wt: 4, val: 50 },
+        { name: 'Item 4', wt: 2, val: 30 }
+      ];
+      const N = items.length;
+      const dp = Array.from({ length: N + 1 }, () => Array(W + 1).fill(0));
+      const computed = Array.from({ length: N + 1 }, (_, r) =>
+        Array.from({ length: W + 1 }, () => r === 0)
+      );
+      const history = [];
+
+      function pushStep(desc, codeLine, curr, deps, formula, optimalCells = []) {
+        steps.push({
+          type: 'dp2d',
+          desc,
+          codeLine,
+          rowHeaders: ['0 (None)', ...items.map((it, idx) => `#${idx+1} (${it.wt}kg,$${it.val})`)],
+          colHeaders: Array.from({ length: W + 1 }, (_, w) => `w=${w}`),
+          dp: JSON.parse(JSON.stringify(dp)),
+          computed: JSON.parse(JSON.stringify(computed)),
+          curr,
+          deps,
+          formula,
+          optimalCells,
+          stack: JSON.parse(JSON.stringify(history.slice(-6).reverse()))
+        });
+      }
+
+      pushStep('Initialized base row i=0 with 0 value for all capacities w=0..W.', 0, null, [], 'Base Case: dp[0][w] = 0');
+
+      for (let i = 1; i <= N; i++) {
+        const { wt, val } = items[i - 1];
+        for (let w = 0; w <= W; w++) {
+          if (wt <= w) {
+            const skipVal = dp[i - 1][w];
+            const takeVal = val + dp[i - 1][w - wt];
+            dp[i][w] = Math.max(skipVal, takeVal);
+            computed[i][w] = true;
+            const f = `dp[${i}][${w}] = max(skip=${skipVal}, $${val} + dp[${i-1}][${w-wt}](${dp[i-1][w-wt]})) = ${dp[i][w]}`;
+            history.push({ call: `dp[${i}][${w}]`, state: `${dp[i][w]} (${takeVal >= skipVal ? 'TAKE' : 'SKIP'})` });
+            pushStep(
+              `Item ${i} (wt=${wt}, val=$${val}) fits in capacity w=${w}: compare skipping ($${skipVal}) vs taking ($${takeVal}).`,
+              3,
+              [i, w],
+              [[i - 1, w], [i - 1, w - wt]],
+              f
+            );
+          } else {
+            dp[i][w] = dp[i - 1][w];
+            computed[i][w] = true;
+            const f = `wt=${wt} > w=${w} → cannot fit, inherit dp[${i-1}][${w}] = ${dp[i][w]}`;
+            history.push({ call: `dp[${i}][${w}]`, state: `${dp[i][w]} (TOO HEAVY)` });
+            pushStep(
+              `Item ${i} (wt=${wt}) exceeds capacity w=${w}. Inherit value $${dp[i - 1][w]} from row above.`,
+              5,
+              [i, w],
+              [[i - 1, w]],
+              f
+            );
+          }
+        }
+      }
+
+      // Backtrack optimal items
+      let remW = W;
+      const opt = [];
+      const chosen = [];
+      for (let i = N; i >= 1; i--) {
+        opt.push([i, remW]);
+        if (dp[i][remW] !== dp[i - 1][remW]) {
+          chosen.push(`Item ${i} ($${items[i-1].val})`);
+          remW -= items[i - 1].wt;
+        }
+      }
+      opt.push([0, remW]);
+      pushStep(
+        `Optimal value is $${dp[N][W]}! Backtracking purple cells shows selected items: ${chosen.reverse().join(' + ')}.`,
+        6,
+        [N, W],
+        [],
+        `Max Value = $${dp[N][W]} | Selected: ${chosen.join(', ')}`,
+        opt
+      );
+    }
+
+    // 4. COIN CHANGE 1D DP
+    function generateCoinChangeSteps() {
+      const rawCoins = (document.getElementById('param-coins')?.value || '1, 3, 4')
+        .split(',')
+        .map(x => parseInt(x.trim()))
+        .filter(x => !isNaN(x) && x > 0);
+      const coins = rawCoins.length ? rawCoins : [1, 3, 4];
+      const amtInput = document.getElementById('param-amount');
+      const amount = Math.max(3, Math.min(10, parseInt(amtInput ? amtInput.value : 6) || 6));
+      if (amtInput) amtInput.value = amount;
+
+      const INF = 99;
+      const dp = Array(amount + 1).fill(INF);
+      const computed = Array(amount + 1).fill(false);
+      dp[0] = 0;
+      computed[0] = true;
+      const history = [];
+
+      function pushStep(desc, codeLine, curr, deps, formula, optimalCells = []) {
+        steps.push({
+          type: 'dp2d',
+          desc,
+          codeLine,
+          rowHeaders: ['Min Coins'],
+          colHeaders: Array.from({ length: amount + 1 }, (_, a) => `amt=${a}`),
+          dp: [dp.map(v => (v >= INF ? '∞' : v))],
+          computed: [computed.slice()],
+          curr: curr !== null ? [0, curr] : null,
+          deps: deps.map(d => [0, d]),
+          formula,
+          optimalCells: optimalCells.map(c => [0, c]),
+          stack: JSON.parse(JSON.stringify(history.slice(-6).reverse()))
+        });
+      }
+
+      pushStep(`Base case: dp[0] = 0 coins, all other amounts initialized to ∞.`, 0, 0, [], `dp[0] = 0`);
+
+      for (let a = 1; a <= amount; a++) {
+        for (const c of coins) {
+          if (a - c >= 0) {
+            const candidate = dp[a - c] + 1;
+            const improved = candidate < dp[a];
+            if (improved) dp[a] = candidate;
+            computed[a] = true;
+            const f = `Try coin=${c}: min(dp[${a}], 1 + dp[${a - c}]) → ${dp[a] >= INF ? '∞' : dp[a]}`;
+            history.push({ call: `amt=${a}, coin=${c}`, state: `dp[${a}] = ${dp[a] >= INF ? '∞' : dp[a]}` });
+            pushStep(
+              `Target amount ${a} using coin ${c}: look back at dp[${a - c}] (${dp[a - c] >= INF ? '∞' : dp[a - c]}) + 1 coin = ${candidate >= INF ? '∞' : candidate}.`,
+              4,
+              a,
+              [a - c],
+              f
+            );
+          }
+        }
+      }
+
+      pushStep(
+        `Finished! Minimum coins to make amount ${amount} is ${dp[amount] >= INF ? 'Impossible' : dp[amount]}.`,
+        5,
+        amount,
+        [],
+        `Answer: dp[${amount}] = ${dp[amount] >= INF ? '∞' : dp[amount]}`,
+        [amount]
+      );
+    }
+
+    // 5. LONGEST COMMON SUBSEQUENCE (LCS)
+    function generateLCSSteps() {
+      const s1 = (document.getElementById('param-s1')?.value || 'ACDBE').toUpperCase().slice(0, 6);
+      const s2 = (document.getElementById('param-s2')?.value || 'ABCDE').toUpperCase().slice(0, 6);
+      const m = s1.length;
+      const n = s2.length;
+
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+      const computed = Array.from({ length: m + 1 }, (_, r) =>
+        Array.from({ length: n + 1 }, (_, c) => r === 0 || c === 0)
+      );
+      const history = [];
+
+      function pushStep(desc, codeLine, curr, deps, formula, optimalCells = []) {
+        steps.push({
+          type: 'dp2d',
+          desc,
+          codeLine,
+          rowHeaders: ['""', ...s1.split('').map((ch, i) => `${ch} (${i+1})`)],
+          colHeaders: ['""', ...s2.split('').map((ch, j) => `${ch} (${j+1})`)],
+          dp: JSON.parse(JSON.stringify(dp)),
+          computed: JSON.parse(JSON.stringify(computed)),
+          curr,
+          deps,
+          formula,
+          optimalCells,
+          stack: JSON.parse(JSON.stringify(history.slice(-6).reverse()))
+        });
+      }
+
+      pushStep(`Initialized row 0 and col 0 to 0 (empty prefix matches).`, 0, null, [], `Base row/col = 0`);
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const match = s1[i - 1] === s2[j - 1];
+          if (match) {
+            dp[i][j] = 1 + dp[i - 1][j - 1];
+            computed[i][j] = true;
+            history.push({ call: `('${s1[i-1]}','${s2[j-1]}')`, state: `Match! -> ${dp[i][j]}` });
+            pushStep(
+              `Characters match ('${s1[i - 1]}' == '${s2[j - 1]}')! Take diagonal dp[${i - 1}][${j - 1}] + 1 = ${dp[i][j]}.`,
+              3,
+              [i, j],
+              [[i - 1, j - 1]],
+              `s1[${i-1}] == s2[${j-1}] ('${s1[i-1]}') → 1 + dp[${i-1}][${j-1}] = ${dp[i][j]}`
+            );
+          } else {
+            dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            computed[i][j] = true;
+            history.push({ call: `('${s1[i-1]}','${s2[j-1]}')`, state: `max(${dp[i-1][j]},${dp[i][j-1]})=${dp[i][j]}` });
+            pushStep(
+              `Mismatch ('${s1[i - 1]}' != '${s2[j - 1]}'): take max(top=${dp[i - 1][j]}, left=${dp[i][j - 1]}) = ${dp[i][j]}.`,
+              5,
+              [i, j],
+              [[i - 1, j], [i, j - 1]],
+              `Mismatch → max(dp[${i-1}][${j}](${dp[i-1][j]}), dp[${i}][${j-1}](${dp[i][j-1]})) = ${dp[i][j]}`
+            );
+          }
+        }
+      }
+
+      // Backtrack LCS string
+      let i = m, j = n;
+      const opt = [];
+      const chars = [];
+      while (i > 0 && j > 0) {
+        opt.push([i, j]);
+        if (s1[i - 1] === s2[j - 1]) {
+          chars.push(s1[i - 1]);
+          i--;
+          j--;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+          i--;
+        } else {
+          j--;
+        }
+      }
+      const lcsStr = chars.reverse().join('');
+      pushStep(
+        `Complete! LCS length is ${dp[m][n]} ("${lcsStr}"). Purple cells show the traceback path.`,
+        5,
+        [m, n],
+        [],
+        `LCS("${s1}", "${s2}") = "${lcsStr}" (Length ${dp[m][n]})`,
+        opt
+      );
+    }
+
+    // 6. GRAPH ALGORITHMS (BFS, DFS, DIJKSTRA)
+    function generateGraphSteps(mode) {
+      const startNode = document.getElementById('param-start')?.value || 'A';
+      const targetNode = document.getElementById('param-target')?.value || 'F';
+
+      const baseNodes = {
+        A: { id: 'A', x: 110, y: 195 },
+        B: { id: 'B', x: 270, y: 90 },
+        C: { id: 'C', x: 270, y: 300 },
+        D: { id: 'D', x: 470, y: 90 },
+        E: { id: 'E', x: 470, y: 300 },
+        F: { id: 'F', x: 650, y: 195 }
+      };
+
+      const rawEdges = [
+        { u: 'A', v: 'B', w: 4 },
+        { u: 'A', v: 'C', w: 2 },
+        { u: 'B', v: 'C', w: 1 },
+        { u: 'B', v: 'D', w: 5 },
+        { u: 'C', v: 'D', w: 8 },
+        { u: 'C', v: 'E', w: 10 },
+        { u: 'D', v: 'E', w: 2 },
+        { u: 'D', v: 'F', w: 6 },
+        { u: 'E', v: 'F', w: 3 }
+      ];
+
+      const adj = {};
+      Object.keys(baseNodes).forEach(k => (adj[k] = []));
+      rawEdges.forEach(e => {
+        adj[e.u].push({ to: e.v, w: e.w });
+        adj[e.v].push({ to: e.u, w: e.w });
+      });
+
+      const nodeState = {};
+      const dist = {};
+      const parent = {};
+      Object.keys(baseNodes).forEach(k => {
+        nodeState[k] = 'unvisited';
+        dist[k] = Infinity;
+        parent[k] = null;
+      });
+
+      function snap(desc, codeLine, activeEdge, structureItems, pathEdges = []) {
+        steps.push({
+          type: 'graph',
+          desc,
+          codeLine,
+          baseNodes,
+          rawEdges,
+          nodeState: JSON.parse(JSON.stringify(nodeState)),
+          dist: JSON.parse(JSON.stringify(dist)),
+          parent: JSON.parse(JSON.stringify(parent)),
+          activeEdge,
+          pathEdges,
+          stack: JSON.parse(JSON.stringify(structureItems))
+        });
+      }
+
+      function buildPathEdges(endKey) {
+        const pEdges = [];
+        let curr = endKey;
+        while (parent[curr]) {
+          pEdges.push([parent[curr], curr]);
+          curr = parent[curr];
+        }
+        return pEdges;
+      }
+
+      if (mode === 'bfs') {
+        const q = [startNode];
+        nodeState[startNode] = 'frontier';
+        dist[startNode] = 0;
+        snap(`Enqueued start vertex ${startNode} with distance 0.`, 0, null, [{ call: `Queue[0]: ${startNode}`, state: `dist=0` }]);
+
+        while (q.length > 0) {
+          const u = q.shift();
+          nodeState[u] = 'active';
+          snap(
+            `Dequeued vertex ${u} (dist=${dist[u]}) from front of FIFO queue.`,
+            2,
+            null,
+            q.map((item, idx) => ({ call: `Queue[${idx}]: ${item}`, state: `dist=${dist[item]}` }))
+          );
+
+          if (u === targetNode) {
+            nodeState[u] = 'visited';
+            const pathEdges = buildPathEdges(targetNode);
+            snap(
+              `Target vertex ${targetNode} reached! Shortest unweighted path takes ${dist[targetNode]} edges.`,
+              2,
+              null,
+              [{ call: `Target ${targetNode} Found`, state: `${dist[targetNode]} hops` }],
+              pathEdges
+            );
+            break;
+          }
+
+          for (const nb of adj[u]) {
+            const v = nb.to;
+            if (nodeState[v] === 'unvisited') {
+              nodeState[v] = 'frontier';
+              dist[v] = dist[u] + 1;
+              parent[v] = u;
+              q.push(v);
+              snap(
+                `Discovered unvisited neighbor ${v} via ${u} → ${v}; set dist[${v}]=${dist[v]} and enqueue.`,
+                6,
+                [u, v],
+                q.map((item, idx) => ({ call: `Queue[${idx}]: ${item}`, state: `dist=${dist[item]}` }))
+              );
+            }
+          }
+          nodeState[u] = 'visited';
+        }
+      } else if (mode === 'dfs') {
+        const callStack = [];
+        let stepOrder = 0;
+
+        function dfsVisit(u) {
+          nodeState[u] = 'active';
+          dist[u] = ++stepOrder;
+          callStack.push({ call: `dfs(${u})`, state: `disc #${dist[u]}` });
+          snap(`Entered dfs(${u}) — discovery order #${dist[u]}.`, 1, null, [...callStack].reverse());
+
+          for (const nb of adj[u]) {
+            const v = nb.to;
+            if (nodeState[v] === 'unvisited') {
+              parent[v] = u;
+              nodeState[u] = 'frontier';
+              snap(`Traversing tree edge ${u} → ${v} to unvisited neighbor ${v}.`, 3, [u, v], [...callStack].reverse());
+              dfsVisit(v);
+              nodeState[u] = 'active';
+              snap(`Backtracked from ${v} to active vertex ${u}.`, 5, [v, u], [...callStack].reverse());
+            }
+          }
+
+          nodeState[u] = 'visited';
+          callStack.pop();
+          snap(`Finished exploring all neighbors of ${u}; popping dfs(${u}) from stack.`, 5, null, [...callStack].reverse());
+        }
+
+        dfsVisit(startNode);
+        snap(`DFS traversal complete! Path tree from ${startNode} to ${targetNode} highlighted in purple.`, 5, null, [], buildPathEdges(targetNode));
+      } else if (mode === 'dijkstra') {
+        dist[startNode] = 0;
+        nodeState[startNode] = 'frontier';
+        let pq = [{ node: startNode, d: 0 }];
+
+        function formatPQ() {
+          return pq
+            .slice()
+            .sort((a, b) => a.d - b.d)
+            .map(item => ({ call: `Vertex ${item.node}`, state: `tentative dist = ${item.d}` }));
+        }
+
+        snap(`Initialized dist[${startNode}] = 0 and pushed (${startNode}, 0) into Min-Heap Priority Queue.`, 0, null, formatPQ());
+
+        while (pq.length > 0) {
+          pq.sort((a, b) => a.d - b.d);
+          const { node: u, d } = pq.shift();
+          if (nodeState[u] === 'visited') continue;
+
+          nodeState[u] = 'active';
+          snap(`Popped vertex ${u} with minimum tentative distance dist[${u}] = ${d}.`, 2, null, formatPQ());
+
+          if (u === targetNode) {
+            nodeState[u] = 'visited';
+            const pathEdges = buildPathEdges(targetNode);
+            snap(
+              `Target ${targetNode} settled with guaranteed minimum weight path = ${dist[targetNode]}!`,
+              2,
+              null,
+              [{ call: `Shortest Path to ${targetNode}`, state: `Total Cost = ${dist[targetNode]}` }],
+              pathEdges
+            );
+            break;
+          }
+
+          for (const nb of adj[u]) {
+            const v = nb.to;
+            const w = nb.w;
+            if (nodeState[v] === 'visited') continue;
+            const newDist = dist[u] + w;
+            if (newDist < dist[v]) {
+              const old = dist[v] === Infinity ? '∞' : dist[v];
+              dist[v] = newDist;
+              parent[v] = u;
+              nodeState[v] = 'frontier';
+              pq.push({ node: v, d: newDist });
+              snap(
+                `Relaxed edge ${u} → ${v} (weight ${w}): dist[${v}] improved from ${old} to ${newDist}.`,
+                5,
+                [u, v],
+                formatPQ()
+              );
+            } else {
+              snap(
+                `Checked edge ${u} → ${v} (weight ${w}): ${dist[u]} + ${w} = ${newDist} ≥ current dist[${v}] (${dist[v]}), no update.`,
+                4,
+                [u, v],
+                formatPQ()
+              );
+            }
+          }
+          nodeState[u] = 'visited';
+        }
+      }
+    }
+
+    // =========================================================================
+    // RENDERING ENGINE
+    // =========================================================================
+    function renderCurrentStep() {
+      if (!steps.length) return;
+      const step = steps[currentStepIdx];
+
+      document.getElementById('step-description').textContent = step.desc;
+      document.getElementById('step-counter').textContent = `Step ${currentStepIdx + 1} / ${steps.length}`;
+
+      document.getElementById('btn-prev').disabled = currentStepIdx === 0;
+      document.getElementById('btn-next').disabled = currentStepIdx === steps.length - 1;
+
+      // Highlight active code line
+      document.querySelectorAll('.code-line').forEach((el, idx) => {
+        el.classList.toggle('highlight', idx === step.codeLine);
+      });
+
+      // Render Stack / Queue Inspector
+      const inspector = document.getElementById('state-inspector');
+      const items = step.stack || [];
+      document.getElementById('inspector-count').textContent = `${items.length} frame${items.length === 1 ? '' : 's'}`;
+      if (items.length === 0) {
+        inspector.innerHTML = `<div style="color:var(--text-muted);font-size:12px;">Empty</div>`;
+      } else {
+        inspector.innerHTML = items
+          .map((item, idx) => `
+            <div class="stack-frame ${idx === 0 ? 'active' : ''}">
+              <span>${item.call}</span>
+              <span style="color:var(--accent-blue)">${item.state}</span>
+            </div>
+          `)
+          .join('');
+      }
+
+      // Render main visual stage
+      const stage = document.getElementById('visual-stage');
+      if (step.type === 'tree') renderTreeStage(stage, step);
+      else if (step.type === 'dp2d') renderDPStage(stage, step);
+      else if (step.type === 'graph') renderGraphStage(stage, step);
+    }
+
+    function renderTreeStage(stage, step) {
+      const edgesSvg = step.edges
+        .filter(e => e.status !== 'hidden')
+        .map(e => {
+          const u = step.nodes[e.from];
+          const v = step.nodes[e.to];
+          const stroke = e.status === 'active' ? '#f59e0b' : '#475569';
+          const midX = (u.x + v.x) / 2;
+          const midY = (u.y + v.y) / 2;
+          return `
+            <line x1="${u.x}" y1="${u.y}" x2="${v.x}" y2="${v.y}" stroke="${stroke}" stroke-width="2.2" />
+            ${e.label ? `<text x="${midX}" y="${midY - 5}" fill="#94a3b8" font-size="10" text-anchor="middle">${e.label}</text>` : ''}
+          `;
+        })
+        .join('');
+
+      const nodesSvg = step.nodes
+        .filter(n => n.status !== 'hidden')
+        .map(n => {
+          let fill = '#1e293b';
+          let stroke = '#38bdf8';
+          if (n.status === 'active') {
+            fill = '#78350f';
+            stroke = '#f59e0b';
+          } else if (n.status === 'done') {
+            fill = n.dup ? '#881337' : '#064e3b';
+            stroke = n.dup ? '#f43f5e' : '#10b981';
+          }
+          return `
+            <g transform="translate(${n.x}, ${n.y})">
+              <rect x="-36" y="-18" width="72" height="36" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="2.2" />
+              <text x="0" y="${n.ret !== null ? -2 : 4}" fill="#f8fafc" font-size="11" font-weight="700" text-anchor="middle" font-family="monospace">${n.label}</text>
+              ${n.ret !== null ? `<text x="0" y="12" fill="#fde047" font-size="10" font-weight="700" text-anchor="middle" font-family="monospace">ret:${n.ret}</text>` : ''}
+            </g>
+          `;
+        })
+        .join('');
+
+      stage.innerHTML = `
+        <svg viewBox="0 0 800 390" preserveAspectRatio="xMidYMid meet">
+          ${edgesSvg}
+          ${nodesSvg}
+        </svg>
+      `;
+    }
+
+    function renderDPStage(stage, step) {
+      const isCoordIn = (list, r, c) => (list || []).some(([rr, cc]) => rr === r && cc === c);
+
+      let tableHtml = `<div class="dp-stage"><table class="dp-table"><thead><tr><th>State</th>`;
+      step.colHeaders.forEach(ch => {
+        tableHtml += `<th>${ch}</th>`;
+      });
+      tableHtml += `</tr></thead><tbody>`;
+
+      step.dp.forEach((row, r) => {
+        tableHtml += `<tr><th>${step.rowHeaders[r]}</th>`;
+        row.forEach((val, c) => {
+          let cls = '';
+          if (step.curr && step.curr[0] === r && step.curr[1] === c) cls = 'cell-current';
+          else if (isCoordIn(step.optimalCells, r, c)) cls = 'cell-optimal';
+          else if (isCoordIn(step.deps, r, c)) cls = 'cell-dep';
+          else if (step.computed[r][c]) cls = 'cell-computed';
+          tableHtml += `<td class="${cls}">${val}</td>`;
+        });
+        tableHtml += `</tr>`;
+      });
+      tableHtml += `</tbody></table>`;
+      tableHtml += `<div class="formula-pill">${step.formula || ''}</div></div>`;
+      stage.innerHTML = tableHtml;
+    }
+
+    function renderGraphStage(stage, step) {
+      const isEdgeMatch = (pair, u, v) =>
+        pair && ((pair[0] === u && pair[1] === v) || (pair[0] === v && pair[1] === u));
+
+      const edgesSvg = step.rawEdges
+        .map(e => {
+          const u = step.baseNodes[e.u];
+          const v = step.baseNodes[e.v];
+          const isPath = (step.pathEdges || []).some(p => isEdgeMatch(p, e.u, e.v));
+          const isActive = isEdgeMatch(step.activeEdge, e.u, e.v);
+
+          let stroke = '#334155';
+          let width = 2.2;
+          if (isPath) {
+            stroke = '#a855f7';
+            width = 4.5;
+          } else if (isActive) {
+            stroke = '#f59e0b';
+            width = 4;
+          }
+
+          const midX = (u.x + v.x) / 2;
+          const midY = (u.y + v.y) / 2;
+
+          return `
+            <g>
+              <line x1="${u.x}" y1="${u.y}" x2="${v.x}" y2="${v.y}" stroke="${stroke}" stroke-width="${width}" />
+              <rect x="${midX - 12}" y="${midY - 10}" width="24" height="20" rx="4" fill="#0f172a" stroke="#334155" />
+              <text x="${midX}" y="${midY + 4}" fill="#cbd5e1" font-size="11" font-family="monospace" text-anchor="middle">${e.w}</text>
+            </g>
+          `;
+        })
+        .join('');
+
+      const nodesSvg = Object.keys(step.baseNodes)
+        .map(k => {
+          const n = step.baseNodes[k];
+          const st = step.nodeState[k];
+          let fill = '#1e293b';
+          let stroke = '#64748b';
+
+          const onPath = (step.pathEdges || []).some(p => p[0] === k || p[1] === k);
+          if (onPath) {
+            fill = '#581c87';
+            stroke = '#a855f7';
+          } else if (st === 'active') {
+            fill = '#78350f';
+            stroke = '#f59e0b';
+          } else if (st === 'frontier') {
+            fill = '#0c4a6e';
+            stroke = '#38bdf8';
+          } else if (st === 'visited') {
+            fill = '#064e3b';
+            stroke = '#10b981';
+          }
+
+          const dLabel = step.dist[k] === Infinity ? '∞' : step.dist[k];
+
+          return `
+            <g transform="translate(${n.x}, ${n.y})">
+              <circle r="28" fill="${fill}" stroke="${stroke}" stroke-width="3" />
+              <text x="0" y="-2" fill="#f8fafc" font-size="15" font-weight="800" text-anchor="middle">${k}</text>
+              <text x="0" y="14" fill="#fde047" font-size="11" font-family="monospace" text-anchor="middle">d:${dLabel}</text>
+            </g>
+          `;
+        })
+        .join('');
+
+      stage.innerHTML = `
+        <svg viewBox="0 0 760 390" preserveAspectRatio="xMidYMid meet">
+          ${edgesSvg}
+          ${nodesSvg}
+        </svg>
+      `;
+    }
+
+    // =========================================================================
+    // PLAYBACK CONTROLS
+    // =========================================================================
+    function stepForward() {
+      if (currentStepIdx < steps.length - 1) {
+        currentStepIdx++;
+        renderCurrentStep();
+      } else {
+        stopPlay();
+      }
+    }
+
+    function stepBackward() {
+      stopPlay();
+      if (currentStepIdx > 0) {
+        currentStepIdx--;
+        renderCurrentStep();
+      }
+    }
+
+    function togglePlay() {
+      if (playTimer) {
+        stopPlay();
+      } else {
+        if (currentStepIdx >= steps.length - 1) currentStepIdx = 0;
+        document.getElementById('btn-play').textContent = '⏸ Pause';
+        playTimer = setInterval(() => {
+          if (currentStepIdx < steps.length - 1) {
+            currentStepIdx++;
+            renderCurrentStep();
+          } else {
+            stopPlay();
+          }
+        }, stepDelay);
+      }
+    }
+
+    function stopPlay() {
+      if (playTimer) {
+        clearInterval(playTimer);
+        playTimer = null;
+      }
+      const btn = document.getElementById('btn-play');
+      if (btn) btn.textContent = '▶ Play';
+    }
+
+    function updateSpeed() {
+      const sliderVal = parseInt(document.getElementById('speed-slider').value);
+      stepDelay = 1550 - sliderVal;
+      const mult = (700 / stepDelay).toFixed(1);
+      document.getElementById('speed-label').textContent = `${mult}x`;
+      if (playTimer) {
+        stopPlay();
+        togglePlay();
+      }
+    }
+
+    // Boot on load
+    window.addEventListener('DOMContentLoaded', () => {
+      switchCategory('recursion');
+    });
+  </script>
+</body>
+</html>

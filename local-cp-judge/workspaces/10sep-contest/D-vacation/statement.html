@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>Problem D — Vacation</title>
+  
+<style>
+  /* obsidian-statement-theme */
+  :root {
+    --bg-app: #09090B;
+    --bg-panel: #111115;
+    --bg-surface-subtle: #18181B;
+    --bg-surface-hover: #1F1F24;
+    --border-subtle: #27272A;
+    --border-strong: #3F3F46;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --accent-ac: #10B981;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #27272A transparent;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-secondary);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 24px 28px 36px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .statement-container {
+    max-width: 72ch;
+  }
+  a { color: var(--text-muted); text-decoration: none; }
+  a:hover { color: var(--text-primary); }
+
+  /* Metadata Strip: Uniform Muted Monochrome Chips */
+  .meta-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  /* Title Row */
+  .title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+  .source-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+    white-space: nowrap;
+  }
+  .source-link:hover {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .section-block {
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #E4E4E7;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+  p { margin-bottom: 10px; max-width: 68ch; }
+  ul, ol { margin-left: 18px; margin-bottom: 12px; max-width: 68ch; }
+  li { margin-bottom: 4px; }
+  strong { color: #E4E4E7; font-weight: 600; }
+
+  code {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #E4E4E7;
+  }
+  pre {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 13px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    color: var(--text-primary);
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+
+  /* Side-by-Side Example Cards */
+  .example-wrapper {
+    margin-bottom: 16px;
+  }
+  .example-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 600px) {
+    .example-grid { grid-template-columns: 1fr; }
+  }
+  .io-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .io-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(39, 39, 42, 0.6);
+  }
+  .io-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E4E4E7;
+  }
+  .btn-copy-sample {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .btn-copy-sample:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+  }
+  .btn-copy-sample.copied {
+    color: var(--accent-ac);
+  }
+  .io-card pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+  .example-explanation {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .dp-analysis-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 24px;
+  }
+  .dp-analysis-card pre {
+    background: var(--bg-app);
+  }
+</style>
+
+</head>
+<body>
+  <div class="statement-container">
+    <div class="meta-chips">
+      <span class="meta-chip">AtCoder</span>
+      <span class="meta-chip">Multi-State DP</span>
+      <span class="meta-chip">2.0s</span>
+      <span class="meta-chip">1024MB</span>
+    </div>
+
+    <div class="title-row">
+      <h1>Problem D — Vacation</h1>
+      <a class="source-link" href="https://atcoder.jp/contests/dp/tasks/dp_c" target="_blank" rel="noopener noreferrer">
+        <span>View on AtCoder</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </a>
+    </div>
+
+    <div class="section-block">
+      <h2>Problem Statement</h2>
+      
+<p>Taro's summer vacation starts tomorrow, and he decided to make plans for it now.</p>
+<p>The vacation consists of <em>N</em> days. For each <em>i</em> (1 &le; <em>i</em> &le; <em>N</em>), on the <em>i</em>-th day, Taro will choose one of the following activities and do it:</p>
+<ul>
+  <li><strong>A:</strong> Swim in the sea. Gain <em>a<sub>i</sub></em> points of happiness.</li>
+  <li><strong>B:</strong> Catch bugs in the mountains. Gain <em>b<sub>i</sub></em> points of happiness.</li>
+  <li><strong>C:</strong> Do homework at home. Gain <em>c<sub>i</sub></em> points of happiness.</li>
+</ul>
+<p>As Taro gets bored easily, <strong>he cannot do the same activity on two or more consecutive days</strong>.</p>
+<p>Find the maximum possible total points of happiness that Taro gains.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Input Format</h2>
+      
+<p>The input is given from Standard Input in the following format:</p>
+<pre>N
+a_1 b_1 c_1
+a_2 b_2 c_2
+...
+a_N b_N c_N</pre>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Output Format</h2>
+      
+<p>Print the maximum possible total points of happiness that Taro can gain.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Constraints</h2>
+      
+<ul>
+  <li>1 &le; <em>N</em> &le; 10<sup>5</sup></li>
+  <li>1 &le; <em>a<sub>i</sub></em>, <em>b<sub>i</sub></em>, <em>c<sub>i</sub></em> &le; 10<sup>4</sup></li>
+  <li>All values in input are integers.</li>
+</ul>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Examples</h2>
+      
+<div class="example-wrapper">
+  <div class="example-grid">
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Input</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>3
+10 40 70
+20 50 80
+30 60 90</pre>
+    </div>
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Output</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>210</pre>
+    </div>
+  </div>
+  <div class="example-explanation">
+    <strong>Explanation:</strong> • Day 1: Choose C (happiness 70)<br>• Day 2: Choose B (happiness 50) &mdash; cannot repeat C<br>• Day 3: Choose C (happiness 90) &mdash; cannot repeat B<br>Total = 70 + 50 + 90 = <strong>210</strong>.
+  </div>
+</div>
+
+<div class="example-wrapper">
+  <div class="example-grid">
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 2 Input</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>1
+100 10 1</pre>
+    </div>
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 2 Output</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>100</pre>
+    </div>
+  </div>
+  <div class="example-explanation">
+    <strong>Explanation:</strong> Only 1 day. Taro chooses activity A to gain <strong>100</strong> points.
+  </div>
+</div>
+
+<div class="example-wrapper">
+  <div class="example-grid">
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 3 Input</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>7
+6 7 8
+8 8 3
+2 5 2
+7 8 6
+4 6 8
+2 3 4
+7 5 1</pre>
+    </div>
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 3 Output</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>46</pre>
+    </div>
+  </div>
+  <div class="example-explanation">
+    <strong>Explanation:</strong> Optimal schedule across 7 days: C (8) &rarr; A (8) &rarr; B (5) &rarr; A (7) &rarr; C (8) &rarr; B (3) &rarr; A (7) = <strong>46</strong>.
+  </div>
+</div>
+
+    </div>
+
+    <div class="dp-analysis-card">
+      
+<h3>Dynamic Programming Breakdown</h3>
+<p><strong>State Definition:</strong> Let <code>dp[i][0]</code>, <code>dp[i][1]</code>, <code>dp[i][2]</code> represent the maximum happiness up to day <code>i</code> ending with activity A, B, and C respectively.</p>
+<p><strong>Transitions:</strong> Since consecutive activities cannot be identical:</p>
+<pre>dp[i][0] = a[i] + max(dp[i - 1][1], dp[i - 1][2])
+dp[i][1] = b[i] + max(dp[i - 1][0], dp[i - 1][2])
+dp[i][2] = c[i] + max(dp[i - 1][0], dp[i - 1][1])</pre>
+<p><strong>Answer:</strong> <code>max(dp[N - 1][0], dp[N - 1][1], dp[N - 1][2])</code></p>
+<p><strong>Space Optimization:</strong> We only need the 3 values from the previous day, reducing space to O(1).</p>
+<p><strong>Complexity:</strong> Time: O(N) &bull; Space: O(1).</p>
+
+    </div>
+  </div>
+  <script>
+    function copyPre(btn) {
+      var card = btn.closest('.io-card');
+      var pre = card ? card.querySelector('pre') : null;
+      if (!pre || !navigator.clipboard) return;
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        var label = btn.querySelector('span');
+        if (label) label.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          if (label) label.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    }
+  </script>
+</body>
+</html>

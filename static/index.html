@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local CP Judge</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Monaco Editor Loader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <i data-lucide="layers" class="icon-brand"></i>
+        <span class="brand-title">Local CP Judge</span>
+        <span class="brand-tag">v1.0</span>
+      </div>
+
+      <div class="contest-controls">
+        <select id="contest-select" class="select-input" title="Active Contest">
+          <option value="">Loading contests...</option>
+        </select>
+        <button id="btn-upload" class="btn btn-outline" title="Import DOMjudge / ICPC Contest Archive">
+          <i data-lucide="upload"></i>
+          <span>Upload Archive</span>
+        </button>
+        <input type="file" id="upload-input" accept=".zip" style="display: none;">
+      </div>
+    </div>
+
+    <!-- Problem Navigation Tabs -->
+    <div id="problem-tabs" class="problem-tabs"></div>
+
+    <div class="topbar-right">
+      <button id="btn-toolchain-status" class="btn btn-ghost" title="View installed compilers & toolchains">
+        <i data-lucide="cpu"></i>
+        <span id="toolchain-summary-text">Toolchains</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3-Pane Workspace -->
+  <main class="workspace-layout">
+    <!-- Left Pane: Problem Statement PDF Viewer -->
+    <section id="pane-pdf" class="pane pane-pdf">
+      <div class="pane-header">
+        <div class="pane-title">
+          <i data-lucide="file-text"></i>
+          <span>Problem Statement</span>
+        </div>
+        <div class="pane-actions">
+          <button id="btn-open-pdf-ext" class="btn-icon" title="Open PDF in new browser tab">
+            <i data-lucide="external-link"></i>
+          </button>
+        </div>
+      </div>
+      <div class="pdf-container">
+        <iframe id="pdf-viewer" src="about:blank" title="Problem PDF Viewer"></iframe>
+        <div id="pdf-fallback" class="empty-state" style="display: none;">
+          <i data-lucide="file-text" class="empty-icon"></i>
+          <p>No problem PDF available for this problem.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Draggable Resizer 1 -->
+    <div id="resizer-left" class="pane-resizer" title="Drag to resize PDF view"></div>
+
+    <!-- Center Pane: Code Editor & Local File Sync -->
+    <section id="pane-editor" class="pane pane-editor">
+      <div class="pane-header editor-header">
+        <div class="lang-tabs" id="lang-tabs">
+          <button class="lang-tab active" data-lang="cpp">solution.cpp</button>
+          <button class="lang-tab" data-lang="python">solution.py</button>
+          <button class="lang-tab" data-lang="java">Main.java</button>
+        </div>
+
+        <div class="ref-sub-wrapper">
+          <label for="ref-submission-select" class="ref-label">Reference:</label>
+          <select id="ref-submission-select" class="select-input select-ref" title="Load included contest solution">
+            <option value="">My Workspace</option>
+          </select>
+        </div>
+
+        <div class="auto-sync-wrapper">
+          <label class="toggle-label" title="Automatically reload code when edited externally in VS Code">
+            <input type="checkbox" id="chk-auto-sync" checked>
+            <i data-lucide="refresh-cw" class="icon-sync"></i>
+            <span>Auto-Sync</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Reference Submission Mode Banner -->
+      <div id="ref-banner" class="ref-banner" style="display: none;">
+        <div class="ref-banner-content">
+          <i data-lucide="info"></i>
+          <span>Viewing Reference Submission (Read-Only)</span>
+        </div>
+        <div class="ref-banner-actions">
+          <button id="btn-copy-to-workspace" class="btn btn-xs btn-outline">
+            <i data-lucide="copy"></i> Copy to My Workspace
+          </button>
+          <button id="btn-return-workspace" class="btn btn-xs btn-ghost">
+            Return to My Code
+          </button>
+        </div>
+      </div>
+
+      <!-- Local File Path & External Actions Bar -->
+      <div class="path-bar">
+        <div class="path-display" title="Local Windows path on disk">
+          <i data-lucide="code-2" class="path-icon"></i>
+          <span id="file-path-display">workspaces/...</span>
+          <span id="save-indicator" class="save-indicator">Saved</span>
+        </div>
+        <div class="path-actions">
+          <button id="btn-copy-path" class="btn-icon" title="Copy file path">
+            <i data-lucide="copy"></i>
+          </button>
+          <button id="btn-open-vscode" class="btn btn-xs btn-outline" title="Open workspace and file in VS Code">
+            <i data-lucide="code-2"></i>
+            <span>VS Code</span>
+          </button>
+          <button id="btn-open-explorer" class="btn btn-xs btn-outline" title="Open workspace folder in Windows File Explorer">
+            <i data-lucide="folder-open"></i>
+            <span>Explorer</span>
+          </button>
+          <button id="btn-save-code" class="btn btn-xs btn-primary" title="Save file to disk (Ctrl+S)">
+            <i data-lucide="check"></i>
+            <span>Save</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Code Editor Area -->
+      <div class="editor-body">
+        <div id="editor-container" class="editor-monaco"></div>
+        <textarea id="editor-fallback" class="editor-fallback" spellcheck="false" style="display: none;"></textarea>
+      </div>
+    </section>
+
+    <!-- Draggable Resizer 2 -->
+    <div id="resizer-right" class="pane-resizer" title="Drag to resize Judge view"></div>
+
+    <!-- Right Pane: CPH Judge & Test Runner -->
+    <section id="pane-judge" class="pane pane-judge">
+      <div class="pane-header judge-header">
+        <div class="judge-actions">
+          <button id="btn-run-samples" class="btn btn-run-samples" title="Run Sample Tests (Ctrl+Enter)">
+            <i data-lucide="play"></i>
+            <span>Run Samples</span>
+          </button>
+          <button id="btn-judge-all" class="btn btn-judge-all" title="Judge All Tests (Sample + Secret)">
+            <i data-lucide="zap"></i>
+            <span>Judge All</span>
+          </button>
+          <button id="btn-stop-judge" class="btn btn-stop" style="display: none;" title="Abort Test Execution">
+            <i data-lucide="square"></i>
+            <span>Stop</span>
+          </button>
+        </div>
+
+        <div class="judge-views-nav">
+          <button class="view-tab active" data-view="verdicts">Test Verdicts</button>
+          <button class="view-tab" data-view="custom">Custom Input</button>
+        </div>
+      </div>
+
+      <!-- Test Verdicts View -->
+      <div id="view-verdicts" class="judge-view-content active">
+        <!-- Live SSE Progress Bar -->
+        <div id="judge-progress-bar" class="progress-bar-container" style="display: none;">
+          <div class="progress-info">
+            <span id="progress-stage-text">Compiling solution...</span>
+            <span id="progress-count-text">0 / 0</span>
+          </div>
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Summary Metrics Banner -->
+        <div id="judge-summary-banner" class="summary-banner" style="display: none;">
+          <div class="summary-verdict-box">
+            <span id="summary-verdict-badge" class="verdict-badge verdict-empty">--</span>
+          </div>
+          <div class="summary-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Passed</span>
+              <span id="metric-passed" class="metric-value">0 / 0</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Peak Time</span>
+              <span id="metric-time" class="metric-value">0.0 ms</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Peak Memory</span>
+              <span id="metric-memory" class="metric-value">0.0 MB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Row -->
+        <div class="test-filters">
+          <button class="filter-tab active" data-filter="all">All (<span id="filter-all-count">0</span>)</button>
+          <button class="filter-tab" data-filter="failed">Failed (<span id="filter-failed-count">0</span>)</button>
+          <button class="filter-tab" data-filter="sample">Samples (<span id="filter-sample-count">0</span>)</button>
+          <button class="filter-tab" data-filter="secret">Secrets (<span id="filter-secret-count">0</span>)</button>
+        </div>
+
+        <!-- Collapsible Test Cards Container -->
+        <div id="test-cards-list" class="test-cards-list">
+          <div class="empty-state">
+            <i data-lucide="play" class="empty-icon"></i>
+            <p>Run samples or judge all tests to see live execution results.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Input View -->
+      <div id="view-custom" class="judge-view-content">
+        <div class="custom-input-section">
+          <div class="section-label">Custom Standard Input (stdin)</div>
+          <textarea id="custom-stdin-input" class="custom-textarea" placeholder="Enter input text to test..."></textarea>
+          <div class="custom-actions">
+            <button id="btn-run-custom" class="btn btn-primary">
+              <i data-lucide="play"></i>
+              <span>Run Custom Input</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="custom-output-section" class="custom-output-section" style="display: none;">
+          <div class="section-label">Execution Results</div>
+          <div class="custom-summary-row">
+            <span id="custom-verdict-badge" class="verdict-badge">AC</span>
+            <span class="metric-inline">Time: <strong id="custom-time-val">0.0 ms</strong></span>
+            <span class="metric-inline">Memory: <strong id="custom-mem-val">0.0 MB</strong></span>
+          </div>
+
+          <div class="io-diff-group">
+            <div class="io-diff-box">
+              <div class="io-diff-title">Standard Output (stdout)</div>
+              <pre id="custom-stdout-pre" class="code-preview"></pre>
+            </div>
+            <div id="custom-stderr-box" class="io-diff-box" style="display: none;">
+              <div class="io-diff-title error-title">Standard Error (stderr)</div>
+              <pre id="custom-stderr-pre" class="code-preview error-text"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toolchain Status Popover Modal -->
+  <div id="toolchain-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="cpu"></i>
+          <span>Compiler & Toolchain Status</span>
+        </div>
+        <button id="btn-close-modal" class="btn-icon">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div id="toolchain-modal-body" class="modal-body">
+        <div class="loading-state">Loading toolchain status...</div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-refresh-toolchains" class="btn btn-outline">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

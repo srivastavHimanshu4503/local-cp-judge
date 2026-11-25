@@ -1,0 +1,11 @@
+{
+  "host": "127.0.0.1",
+  "port": 8080,
+  "cpp_compiler": "g++",
+  "python_cmd": "python",
+  "javac_cmd": "javac",
+  "java_cmd": "java",
+  "max_preview_bytes": 500,
+  "default_time_limit_sec": 2.0,
+  "default_memory_limit_mb": 1024
+}

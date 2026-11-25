@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>Problem D — Aibohphobia</title>
+  
+<style>
+  /* obsidian-statement-theme */
+  :root {
+    --bg-app: #09090B;
+    --bg-panel: #111115;
+    --bg-surface-subtle: #18181B;
+    --bg-surface-hover: #1F1F24;
+    --border-subtle: #27272A;
+    --border-strong: #3F3F46;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --accent-ac: #10B981;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #27272A transparent;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-secondary);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 24px 28px 36px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .statement-container {
+    max-width: 72ch;
+  }
+  a { color: var(--text-muted); text-decoration: none; }
+  a:hover { color: var(--text-primary); }
+
+  /* Metadata Strip: Uniform Muted Monochrome Chips */
+  .meta-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  /* Title Row */
+  .title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+  .source-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+    white-space: nowrap;
+  }
+  .source-link:hover {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .section-block {
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #E4E4E7;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+  p { margin-bottom: 10px; max-width: 68ch; }
+  ul, ol { margin-left: 18px; margin-bottom: 12px; max-width: 68ch; }
+  li { margin-bottom: 4px; }
+  strong { color: #E4E4E7; font-weight: 600; }
+
+  code {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #E4E4E7;
+  }
+  pre {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 13px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    color: var(--text-primary);
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+
+  /* Side-by-Side Example Cards */
+  .example-wrapper {
+    margin-bottom: 16px;
+  }
+  .example-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 600px) {
+    .example-grid { grid-template-columns: 1fr; }
+  }
+  .io-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .io-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(39, 39, 42, 0.6);
+  }
+  .io-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E4E4E7;
+  }
+  .btn-copy-sample {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .btn-copy-sample:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+  }
+  .btn-copy-sample.copied {
+    color: var(--accent-ac);
+  }
+  .io-card pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+  .example-explanation {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .dp-analysis-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 24px;
+  }
+  .dp-analysis-card pre {
+    background: var(--bg-app);
+  }
+</style>
+
+</head>
+<body>
+  <div class="statement-container">
+    <div class="meta-chips">
+      <span class="meta-chip">SPOJ</span>
+      <span class="meta-chip">DP (LCS / Palindromic Subsequence)</span>
+      <span class="meta-chip">2.0s</span>
+      <span class="meta-chip">1024MB</span>
+    </div>
+
+    <div class="title-row">
+      <h1>Problem D — Aibohphobia</h1>
+      <a class="source-link" href="https://www.spoj.com/problems/AIBOHP/" target="_blank" rel="noopener noreferrer">
+        <span>View on SPOJ</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </a>
+    </div>
+
+    <div class="section-block">
+      <h2>Problem Statement</h2>
+      
+<p>BuggyD suffers from a severe psychological condition called <strong>aibohphobia</strong> &mdash; the irrational fear of palindromes (words that read the same backwards and forwards). Notice that the name 'aibohphobia' itself is a palindrome!</p>
+<p>To help overcome this fear, he wants to transform any given word into a palindrome by inserting characters. You can insert characters at any position (at the beginning, middle, or end).</p>
+<p>Given a string <em>S</em>, find the <strong>minimum number of character insertions</strong> required to make it a palindrome.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Input Format</h2>
+      
+<p>The first line contains an integer <em>T</em>, the number of test cases. Each of the next <em>T</em> lines contains a single string <em>S</em>.</p>
+<pre>T
+S_1
+...
+S_T</pre>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Output Format</h2>
+      
+<p>For each test case, print the minimum number of insertions on a new line.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Constraints</h2>
+      
+<ul>
+  <li>1 &le; <em>T</em> &le; 100</li>
+  <li>1 &le; |<em>S</em>| &le; 6100</li>
+  <li><em>S</em> consists of lowercase English letters.</li>
+</ul>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Examples</h2>
+      
+<div class="example-wrapper">
+  <div class="example-grid">
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Input</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>1
+fft</pre>
+    </div>
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Output</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>1</pre>
+    </div>
+  </div>
+  <div class="example-explanation">
+    <strong>Explanation:</strong> Given string: <code>"fft"</code>.<br>• Insert 't' at the beginning &rarr; <code>"tfft"</code> (a palindrome with <strong>1</strong> insertion).<br>• Alternatively, insert 't' after the first 'f' &rarr; <code>"fttf"</code> (also 1 insertion).<br>No 0-insertion solution exists since 'fft' is not a palindrome. Minimum insertions = <strong>1</strong>.
+  </div>
+</div>
+
+    </div>
+
+    <div class="dp-analysis-card">
+      
+<h3>Dynamic Programming Breakdown</h3>
+<p><strong>Fundamental Relationship:</strong></p>
+<p>The minimum number of insertions to make <em>S</em> a palindrome is equal to:</p>
+<pre>Min Insertions = |S| - LPS(S)</pre>
+<p>Where <code>LPS(S)</code> is the <strong>Longest Palindromic Subsequence</strong> of <em>S</em>. Furthermore, <code>LPS(S)</code> is identical to the <strong>Longest Common Subsequence (LCS)</strong> between <em>S</em> and its reverse <em>S<sup>rev</sup></em>:</p>
+<pre>LPS(S) = LCS(S, S[::-1])</pre>
+<p><strong>Space Optimization:</strong> Since |S| &le; 6100, allocating a full 6100 &times; 6100 integer matrix requires ~150 MB and risks Memory Limit Exceeded (MLE). By maintaining only two rows (current and previous) of length |S|, memory drops to under 50 KB.</p>
+<p><strong>Complexity:</strong> Time: O(|S|<sup>2</sup>) &bull; Space: O(|S|).</p>
+
+    </div>
+  </div>
+  <script>
+    function copyPre(btn) {
+      var card = btn.closest('.io-card');
+      var pre = card ? card.querySelector('pre') : null;
+      if (!pre || !navigator.clipboard) return;
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        var label = btn.querySelector('span');
+        if (label) label.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          if (label) label.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    }
+  </script>
+</body>
+</html>

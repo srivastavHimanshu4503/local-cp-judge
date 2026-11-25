@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local CP Judge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Monaco Editor Loader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</head>
+<body>
+  <!-- Slim Top Navigation Bar (48px) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="btn-toggle-sidebar" class="btn-icon btn-sidebar-toggle active" title="Toggle Problem Statement (Ctrl+B)">
+        <i data-lucide="panel-left"></i>
+      </button>
+
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+            <polyline points="9 9 6 12 9 15"></polyline>
+            <polyline points="15 9 18 12 15 15"></polyline>
+          </svg>
+        </span>
+        <span class="brand-title">Local CP Judge</span>
+      </div>
+
+      <div class="contest-controls">
+        <select id="contest-select" class="select-pill" title="Active Contest">
+          <option value="">Loading contests...</option>
+        </select>
+        <!-- Compact Problem Dropdown for < 1024px screens -->
+        <select id="mobile-problem-select" class="select-pill mobile-problem-select" title="Select Problem"></select>
+      </div>
+    </div>
+
+    <!-- Center: Segmented Problem Switcher Pills -->
+    <nav id="problem-tabs" class="problem-tabs-pillgroup" aria-label="Contest Problems"></nav>
+
+    <!-- Right: Monospace Timer + Mode Pill + Upload -->
+    <div class="topbar-right">
+      <div class="contest-timer" id="contest-timer">
+        <span id="timer-display" class="timer-display">00:00:00</span>
+        <button id="btn-timer-toggle" class="btn-timer-act" title="Start / Pause Stopwatch">
+          <i data-lucide="play" id="timer-toggle-icon"></i>
+        </button>
+        <button id="btn-timer-reset" class="btn-timer-act" title="Reset Stopwatch">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+      </div>
+
+      <button id="btn-timer-mode" class="pill-control" title="Switch Mode: Practice (Count Up) / 2h Contest">
+        <span id="timer-mode-badge">Practice</span>
+      </button>
+
+      <button id="btn-upload" class="pill-control pill-upload" title="Import DOMjudge / ICPC Contest Archive (.zip)">
+        <i data-lucide="upload"></i>
+        <span>Upload</span>
+      </button>
+      <input type="file" id="upload-input" accept=".zip" style="display: none;">
+
+      <button id="btn-toolchain-status" class="btn-icon btn-toolchain" title="Compiler & Toolchain Status">
+        <i data-lucide="cpu"></i>
+        <span id="toolchain-summary-text" class="sr-only">Toolchains</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Responsive Switcher (< 1024px) -->
+  <div id="mobile-pane-switcher" class="mobile-pane-switcher" role="tablist">
+    <button type="button" class="mobile-pane-tab active" data-pane="statement">Problem</button>
+    <button type="button" class="mobile-pane-tab" data-pane="workspace">Code &amp; Tests</button>
+  </div>
+
+  <!-- Main Obsidian Split Workspace -->
+  <main class="workspace-layout">
+    <!-- Left Pane: Problem Statement Viewer -->
+    <section id="pane-pdf" class="pane pane-pdf pane-statement">
+      <div class="statement-floating-actions">
+        <button id="btn-open-pdf-ext" class="btn-icon btn-subtle-float" title="Open Statement in New Tab">
+          <i data-lucide="external-link"></i>
+        </button>
+        <button id="btn-collapse-sidebar" class="btn-icon btn-subtle-float" title="Hide Statement (Ctrl+B)">
+          <i data-lucide="panel-left-close"></i>
+        </button>
+      </div>
+      <div class="pdf-container">
+        <iframe id="pdf-viewer" src="about:blank" title="Problem Statement Viewer"></iframe>
+        <div id="pdf-fallback" class="empty-state" style="display: none;">
+          <i data-lucide="file-text" class="empty-icon"></i>
+          <p>No problem statement available for this problem.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Crisp 1px Vertical Resizer -->
+    <div id="resizer-cols" class="pane-resizer resizer-col" title="Drag to resize Statement pane"></div>
+
+    <!-- Right Pane: Code Editor + Docked Test Runner -->
+    <div id="workspace-right" class="workspace-right">
+      <!-- Upper Section: Consolidated Code Editor -->
+      <section id="pane-editor" class="pane pane-editor">
+        <!-- Unified 40px Editor Tab Bar -->
+        <div class="editor-tabbar">
+          <div class="lang-tabs" id="lang-tabs">
+            <button class="lang-tab active" data-lang="python">
+              <span class="lang-badge lang-py">PY</span>
+              <span>solution.py</span>
+            </button>
+            <button class="lang-tab" data-lang="cpp">
+              <span class="lang-badge lang-cpp">C++</span>
+              <span>solution.cpp</span>
+            </button>
+            <button class="lang-tab" data-lang="java">
+              <span class="lang-badge lang-java">JV</span>
+              <span>Main.java</span>
+            </button>
+          </div>
+
+          <div class="editor-tabbar-right">
+            <div class="ref-sub-wrapper">
+              <select id="ref-submission-select" class="select-compact select-ref" title="Load included reference submission">
+                <option value="">My Workspace</option>
+              </select>
+            </div>
+
+            <label class="autosync-pill" title="Auto-Sync code when edited externally in VS Code">
+              <input type="checkbox" id="chk-auto-sync" checked>
+              <span class="autosync-dot"></span>
+              <span>Auto-Sync</span>
+            </label>
+
+            <button id="btn-open-vscode" class="btn-tab-action" title="Open workspace and file in VS Code">
+              <i data-lucide="code-2"></i>
+              <span>VS Code</span>
+            </button>
+
+            <button id="btn-open-explorer" class="btn-icon btn-tab-icon" title="Open workspace folder in File Explorer">
+              <i data-lucide="folder-open"></i>
+            </button>
+
+            <button id="btn-save-code" class="btn-icon btn-tab-icon btn-save-icon" title="Save file to disk (Ctrl+S)">
+              <i data-lucide="save"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Reference Submission Mode Banner -->
+        <div id="ref-banner" class="ref-banner" style="display: none;">
+          <div class="ref-banner-content">
+            <i data-lucide="info"></i>
+            <span>Viewing Reference Submission (Read-Only)</span>
+          </div>
+          <div class="ref-banner-actions">
+            <button id="btn-copy-to-workspace" class="btn btn-xs btn-outline">
+              <i data-lucide="copy"></i> Copy to My Workspace
+            </button>
+            <button id="btn-return-workspace" class="btn btn-xs btn-ghost">
+              Return to My Code
+            </button>
+          </div>
+        </div>
+
+        <!-- Slim 28px Breadcrumb Strip -->
+        <div class="path-bar">
+          <div class="path-display">
+            <span id="file-path-display" class="breadcrumb-path" title="Local path on disk">.../workspace/solution.py</span>
+            <button id="btn-copy-path" class="btn-icon btn-tiny" title="Copy full file path">
+              <i data-lucide="copy"></i>
+            </button>
+            <span id="save-indicator" class="save-indicator">Saved</span>
+            <span id="problem-status-pill" class="problem-status-pill status-unsolved">Not Attempted</span>
+          </div>
+          <div class="path-actions">
+            <div class="zoom-controls" title="Editor Font Size (Ctrl + Mouse Wheel, Ctrl + / -)">
+              <button id="btn-zoom-out" class="btn-zoom" title="Zoom Out (Ctrl + -)">
+                <i data-lucide="minus"></i>
+              </button>
+              <button id="btn-zoom-reset" class="zoom-level-badge" title="Reset Font Size to 14px (Ctrl + 0)">
+                <span id="zoom-level-text">100%</span>
+              </button>
+              <button id="btn-zoom-in" class="btn-zoom" title="Zoom In (Ctrl + +)">
+                <i data-lucide="plus"></i>
+              </button>
+            </div>
+            <button id="btn-toggle-wrap" class="btn-icon btn-tiny" title="Toggle Word Wrap (Alt + Z)">
+              <i data-lucide="wrap-text"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Code Editor Canvas -->
+        <div class="editor-body" id="editor-body">
+          <div id="editor-container" class="editor-monaco"></div>
+          <textarea id="editor-fallback" class="editor-fallback" spellcheck="false" style="display: none;"></textarea>
+          <div id="editor-dropzone" class="editor-dropzone" style="display: none;">
+            <i data-lucide="file-code" class="dropzone-icon"></i>
+            <span class="dropzone-text">Drop code file (.cpp, .py, .java) to load into workspace</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Horizontal Resizer (Editor vs Test Runner) -->
+      <div id="resizer-console" class="pane-resizer resizer-row" title="Drag to resize Test Runner height"></div>
+
+      <!-- Docked Bottom Test Runner -->
+      <section id="pane-console" class="pane pane-console">
+        <!-- 40px Clean Underline Tab Header -->
+        <div class="console-header">
+          <div class="console-tabs">
+            <button class="view-tab active" data-view="verdicts">
+              <span>Test Verdicts</span>
+            </button>
+            <button class="view-tab" data-view="custom">
+              <span>Custom Input</span>
+            </button>
+            <button class="view-tab" data-view="stress">
+              <span>Stress Tester</span>
+            </button>
+          </div>
+          <div class="console-header-actions">
+            <button id="btn-minimize-console" class="btn-icon btn-tiny" title="Collapse Test Runner">
+              <i data-lucide="chevron-down"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Runner Body -->
+        <div class="console-body">
+          <!-- Test Verdicts View -->
+          <div id="view-verdicts" class="judge-view-content active">
+            <!-- Live SSE Progress Bar -->
+            <div id="judge-progress-bar" class="progress-bar-container" style="display: none;">
+              <div class="progress-info">
+                <span id="progress-stage-text">Compiling solution...</span>
+                <span id="progress-count-text">0 / 0</span>
+              </div>
+              <div class="progress-track">
+                <div id="progress-fill" class="progress-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Clean Empty State -->
+            <div id="judge-empty-state" class="empty-state runner-empty">
+              <p>Run samples (<code>Ctrl+'</code>) or judge all tests (<code>Ctrl+Enter</code>) to view results.</p>
+            </div>
+
+            <!-- LeetCode-Style Result Viewer -->
+            <div id="leetcode-result-view" class="leetcode-result-view" style="display: none;">
+              <!-- Prominent Verdict Banner Card (Solved vs Failed Attempt) -->
+              <div id="lc-verdict-banner-card" class="lc-verdict-banner-card" style="display: none;">
+                <div class="verdict-banner-icon-box">
+                  <i data-lucide="check-circle-2" id="lc-banner-icon"></i>
+                </div>
+                <div class="verdict-banner-text-box">
+                  <div id="lc-banner-title" class="verdict-banner-title">Problem Solved!</div>
+                  <div id="lc-banner-subtitle" class="verdict-banner-subtitle">All testcases passed without discrepancies.</div>
+                </div>
+              </div>
+
+              <!-- Verdict Header: Status + Metrics -->
+              <div class="lc-verdict-header">
+                <div class="lc-verdict-title-row">
+                  <h2 id="lc-verdict-title" class="lc-verdict-title">Wrong Answer</h2>
+                  <span id="lc-passed-counter" class="lc-passed-counter">14 / 25 testcases passed</span>
+                </div>
+                <div id="lc-metrics-row" class="lc-metrics-row">
+                  <span class="lc-metric">Runtime: <strong id="lc-runtime-val">12.4 ms</strong></span>
+                  <span class="lc-metric-sep">•</span>
+                  <span class="lc-metric">Memory: <strong id="lc-memory-val">15.1 MB</strong></span>
+                </div>
+              </div>
+
+              <!-- Compile Error Box -->
+              <div id="lc-compile-error-box" class="lc-compile-error-box" style="display: none;">
+                <div class="lc-io-title error-title">Compiler Diagnostics</div>
+                <pre id="lc-compile-error-text" class="code-preview error-text"></pre>
+              </div>
+
+              <!-- Testcase Inspector -->
+              <div id="lc-testcase-inspector" class="lc-testcase-inspector">
+                <div class="lc-tabs-row">
+                  <span class="lc-tabs-label" id="lc-tabs-label">Failed Testcases:</span>
+                  <div id="lc-case-pills" class="lc-case-pills"></div>
+                </div>
+
+                <div class="lc-io-container">
+                  <div class="lc-io-group">
+                    <div class="lc-io-header">
+                      <span class="lc-io-label">Input</span>
+                      <div class="lc-io-actions">
+                        <button id="btn-pin-active-test" class="btn btn-xs btn-outline" title="Pin this testcase to My Tests">
+                          <i data-lucide="pin"></i>
+                          <span>Pin to My Tests</span>
+                        </button>
+                        <button id="btn-copy-lc-input" class="btn-copy-io" title="Copy input">
+                          <i data-lucide="copy"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <pre id="lc-input-content" class="lc-io-content"></pre>
+                  </div>
+
+                  <div class="lc-io-controls-row">
+                    <div class="lc-view-modes">
+                      <button id="btn-mode-text" class="btn-mode active" title="Standard Text View">
+                        <i data-lucide="align-left"></i>
+                        <span>Text View</span>
+                      </button>
+                      <button id="btn-mode-diff" class="btn-mode" title="Monaco Side-by-Side Visual Diff">
+                        <i data-lucide="git-compare"></i>
+                        <span>Visual Diff</span>
+                      </button>
+                    </div>
+                    <div id="lc-whitespace-badges" class="lc-whitespace-badges"></div>
+                  </div>
+
+                  <div id="lc-diff-editor-wrapper" class="lc-diff-editor-wrapper" style="display: none;">
+                    <div class="lc-diff-header">
+                      <span>Expected Output (Original) vs Your Output (Modified)</span>
+                    </div>
+                    <div id="lc-monaco-diff-container" class="lc-monaco-diff-container"></div>
+                  </div>
+
+                  <div class="lc-io-group" id="lc-actual-group">
+                    <div class="lc-io-header">
+                      <span class="lc-io-label" id="lc-actual-label">Output</span>
+                      <button id="btn-copy-lc-output" class="btn-copy-io" title="Copy output">
+                        <i data-lucide="copy"></i>
+                      </button>
+                    </div>
+                    <pre id="lc-actual-content" class="lc-io-content"></pre>
+                  </div>
+
+                  <div class="lc-io-group" id="lc-expected-group">
+                    <div class="lc-io-header">
+                      <span class="lc-io-label">Expected</span>
+                      <button id="btn-copy-lc-expected" class="btn-copy-io" title="Copy expected">
+                        <i data-lucide="copy"></i>
+                      </button>
+                    </div>
+                    <pre id="lc-expected-content" class="lc-io-content"></pre>
+                  </div>
+
+                  <div id="lc-diag-group" class="lc-io-group" style="display: none;">
+                    <div class="lc-io-header">
+                      <span class="lc-io-label error-title" id="lc-diag-label">Difference / Diagnostics</span>
+                    </div>
+                    <div id="lc-diag-content" class="lc-diff-banner"></div>
+                  </div>
+                </div>
+
+                <div class="lc-all-tests-wrapper">
+                  <button id="btn-toggle-all-tests" class="btn-toggle-all-tests">
+                    <i data-lucide="chevron-right" id="lc-all-tests-chevron"></i>
+                    <span id="lc-all-tests-label">View all test results</span>
+                  </button>
+                  <div id="lc-all-tests-table" class="lc-all-tests-table" style="display: none;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Backward compatibility hidden nodes -->
+            <div id="test-cards-list" class="test-cards-list" style="display: none;"></div>
+            <div id="judge-summary-banner" style="display: none;"><span id="summary-verdict-badge"></span><span id="metric-passed"></span><span id="metric-time"></span><span id="metric-memory"></span></div>
+            <div class="test-filters" style="display: none;"><span id="filter-all-count"></span><span id="filter-failed-count"></span><span id="filter-sample-count"></span><span id="filter-secret-count"></span></div>
+          </div>
+
+          <!-- Custom Input View -->
+          <div id="view-custom" class="judge-view-content">
+            <div class="custom-input-section">
+              <div class="section-label">Custom Standard Input (stdin)</div>
+              <textarea id="custom-stdin-input" class="custom-textarea" placeholder="Enter input text to test..."></textarea>
+              <div class="custom-actions">
+                <button id="btn-run-custom" class="btn btn-judge-all">
+                  <i data-lucide="play"></i>
+                  <span>Run Custom Input</span>
+                </button>
+                <button id="btn-save-custom-test" class="btn btn-outline" title="Save this input as a persistent custom testcase">
+                  <i data-lucide="save"></i>
+                  <span>Save to My Tests</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="custom-output-section" class="custom-output-section" style="display: none;">
+              <div class="section-label">Execution Results</div>
+              <div class="custom-summary-row">
+                <span id="custom-verdict-badge" class="verdict-badge">AC</span>
+                <span class="metric-inline">Time: <strong id="custom-time-val">0.0 ms</strong></span>
+                <span class="metric-inline">Memory: <strong id="custom-mem-val">0.0 MB</strong></span>
+              </div>
+
+              <div class="io-diff-group">
+                <div class="io-diff-box">
+                  <div class="io-diff-title">Standard Output (stdout)</div>
+                  <pre id="custom-stdout-pre" class="code-preview"></pre>
+                </div>
+                <div id="custom-stderr-box" class="io-diff-box" style="display: none;">
+                  <div class="io-diff-title error-title">Standard Error (stderr)</div>
+                  <pre id="custom-stderr-pre" class="code-preview error-text"></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="custom-saved-section">
+              <div class="custom-saved-header">
+                <div class="section-label">My Saved Testcases</div>
+                <span id="custom-tests-count" class="badge-tag">0 saved</span>
+              </div>
+              <div id="custom-tests-list" class="custom-tests-list">
+                <div class="custom-tests-empty">No saved custom testcases yet. Click "Save to My Tests" to add one.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stress Tester View -->
+          <div id="view-stress" class="judge-view-content">
+            <div class="stress-control-card">
+              <div class="stress-header">
+                <div class="stress-title">
+                  <i data-lucide="crosshair"></i>
+                  <span>Differential Stress Tester</span>
+                </div>
+                <span class="stress-subtitle">Automatically fuzz testcases against a brute-force reference submission to discover edge-case counterexamples.</span>
+              </div>
+              <div class="stress-form-row">
+                <div class="stress-field">
+                  <label for="stress-ref-select">Reference / Brute Solution</label>
+                  <select id="stress-ref-select" class="stress-select"></select>
+                </div>
+                <div class="stress-field" style="max-width: 140px;">
+                  <label for="stress-iterations">Max Iterations</label>
+                  <input id="stress-iterations" type="number" class="stress-input" min="5" max="300" value="50">
+                </div>
+                <div class="stress-field stress-action-field">
+                  <button id="btn-run-stress" class="btn btn-judge-all">
+                    <i data-lucide="play"></i>
+                    <span>Start Stress Test</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="stress-results-box" class="stress-results-box" style="display: none;">
+              <div class="stress-status-row">
+                <span id="stress-status-badge" class="verdict-badge">Mismatch</span>
+                <span id="stress-status-text" class="stress-status-text">Counterexample found at iteration 14!</span>
+              </div>
+              <div id="stress-counterexample-details" class="lc-io-container" style="display: none;">
+                <div class="lc-io-group">
+                  <div class="lc-io-header">
+                    <span class="lc-io-label">Failing Input</span>
+                    <div class="lc-io-actions">
+                      <button id="btn-pin-stress-input" class="btn btn-xs btn-outline" title="Save this failing input as a custom testcase">
+                        <i data-lucide="pin"></i>
+                        <span>Pin to My Tests</span>
+                      </button>
+                      <button id="btn-copy-stress-input" class="btn-copy-io" title="Copy input">
+                        <i data-lucide="copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <pre id="stress-input-content" class="lc-io-content"></pre>
+                </div>
+                <div class="lc-io-group">
+                  <div class="lc-io-header">
+                    <span class="lc-io-label">Your Solution Output</span>
+                    <button id="btn-copy-stress-actual" class="btn-copy-io" title="Copy output">
+                      <i data-lucide="copy"></i>
+                    </button>
+                  </div>
+                  <pre id="stress-actual-content" class="lc-io-content"></pre>
+                </div>
+                <div class="lc-io-group">
+                  <div class="lc-io-header">
+                    <span class="lc-io-label">Brute Reference Output (Expected)</span>
+                    <button id="btn-copy-stress-expected" class="btn-copy-io" title="Copy expected">
+                      <i data-lucide="copy"></i>
+                    </button>
+                  </div>
+                  <pre id="stress-expected-content" class="lc-io-content"></pre>
+                </div>
+                <div id="stress-diff-group" class="lc-io-group" style="display: none;">
+                  <div class="lc-io-header">
+                    <span class="lc-io-label error-title">Diagnostics</span>
+                  </div>
+                  <div id="stress-diff-content" class="lc-diff-banner"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sharp 44px Footer Action Bar -->
+        <div class="console-bottom-bar">
+          <div class="bottom-bar-left">
+            <button id="btn-toggle-console" class="btn-console-toggle" title="Toggle Test Runner">
+              <span id="console-chevron-icon"><i data-lucide="chevron-down"></i></span>
+              <span class="console-toggle-text">Console</span>
+            </button>
+            <label class="switch-control" title="Stop testing immediately on the first failed testcase">
+              <input type="checkbox" id="chk-fail-fast" class="switch-input">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              <span class="switch-label">Fail Fast</span>
+            </label>
+          </div>
+          <div class="bottom-bar-right">
+            <button id="btn-run-custom-tests" class="btn btn-outline-subtle" title="Run Saved Custom Tests (suite='custom')">
+              <i data-lucide="list-checks"></i>
+              <span>Run My Tests</span>
+            </button>
+            <button id="btn-run-samples" class="btn btn-run-samples" title="Run Sample Tests (Ctrl + ')">
+              <span>Run Samples</span>
+            </button>
+            <button id="btn-judge-all" class="btn btn-judge-all" title="Judge All Tests (Ctrl + Enter)">
+              <span>Judge All</span>
+            </button>
+            <button id="btn-stop-judge" class="btn btn-stop" style="display: none;" title="Abort Test Execution">
+              <i data-lucide="square"></i>
+              <span>Stop</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Toolchain Status Popover Modal -->
+  <div id="toolchain-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="cpu"></i>
+          <span>Compiler &amp; Toolchain Status</span>
+        </div>
+        <button id="btn-close-modal" class="btn-icon">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div id="toolchain-modal-body" class="modal-body">
+        <div class="loading-state">Loading toolchain status...</div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-refresh-toolchains" class="btn btn-outline-subtle">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Dropzone for Contest Archives -->
+  <div id="global-dropzone" class="global-dropzone" style="display: none;">
+    <div class="dropzone-card">
+      <i data-lucide="archive" class="dropzone-card-icon"></i>
+      <h3>Drop Contest Archive (.zip)</h3>
+      <p>Import and index all problem statements and test cases</p>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

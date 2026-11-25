@@ -1,0 +1,33 @@
+# Python & Virtual Environments
+.venv/
+venv/
+env/
+local-cp-judge/.venv/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Compiled Artifacts, Builds & Per-User Sessions
+local-cp-judge/build/
+local-cp-judge/user_workspaces/
+**/.build/
+**/.cph/
+*.exe
+*.class
+*.out
+
+# OS Metadata & Editor Artifacts
+.DS_Store
+Thumbs.db
+._*
+__MACOSX/
+
+# Large Extracted Contest Duplicates (reproducible from root *.zip via bootstrap_contests.py)
+15oct-contest/
+local-cp-judge/workspaces/15oct-contest/
+local-cp-judge/workspaces/22oct-contest/
+local-cp-judge/workspaces/29oct-source/
+local-cp-judge/workspaces/contest-25nov/
+local-cp-judge/workspaces/makeup-contest/
+local-cp-judge/workspaces/graph-contest-4/
+local-cp-judge/workspaces/graph-traversal-problems/

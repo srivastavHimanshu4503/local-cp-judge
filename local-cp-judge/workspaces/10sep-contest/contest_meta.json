@@ -1,0 +1,103 @@
+{
+  "contest_id": "10sep-contest",
+  "title": "10Sep Contest",
+  "created_at": "2026-11-24T18:34:23.924892+00:00",
+  "problems": [
+    {
+      "problem_id": "A-rabbit-frog-1",
+      "short_name": "A",
+      "name": "Rabbit / Frog 1",
+      "time_limit_sec": 2.0,
+      "memory_limit_mb": 1024,
+      "color": "#4C51BF",
+      "has_pdf": false,
+      "has_statement": true,
+      "statement_type": "html",
+      "sample_count": 3,
+      "secret_count": 0,
+      "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace",
+      "files": {
+        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace\\solution.cpp",
+        "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace\\solution.py",
+        "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\A-rabbit-frog-1\\workspace\\Main.java"
+      },
+      "reference_submissions": {
+        "accepted": [
+          "solution.py"
+        ]
+      }
+    },
+    {
+      "problem_id": "B-is-subsequence",
+      "short_name": "B",
+      "name": "Is Subsequence",
+      "time_limit_sec": 2.0,
+      "memory_limit_mb": 1024,
+      "color": "#3182CE",
+      "has_pdf": false,
+      "has_statement": true,
+      "statement_type": "html",
+      "sample_count": 2,
+      "secret_count": 0,
+      "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace",
+      "files": {
+        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace\\solution.cpp",
+        "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace\\solution.py",
+        "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\B-is-subsequence\\workspace\\Main.java"
+      },
+      "reference_submissions": {
+        "accepted": [
+          "solution.py"
+        ]
+      }
+    },
+    {
+      "problem_id": "C-minimum-path-sum",
+      "short_name": "C",
+      "name": "Minimum Path Sum",
+      "time_limit_sec": 2.0,
+      "memory_limit_mb": 1024,
+      "color": "#805AD5",
+      "has_pdf": false,
+      "has_statement": true,
+      "statement_type": "html",
+      "sample_count": 2,
+      "secret_count": 0,
+      "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace",
+      "files": {
+        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace\\solution.cpp",
+        "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace\\solution.py",
+        "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\C-minimum-path-sum\\workspace\\Main.java"
+      },
+      "reference_submissions": {
+        "accepted": [
+          "solution.py"
+        ]
+      }
+    },
+    {
+      "problem_id": "D-vacation",
+      "short_name": "D",
+      "name": "Vacation",
+      "time_limit_sec": 2.0,
+      "memory_limit_mb": 1024,
+      "color": "#D69E2E",
+      "has_pdf": false,
+      "has_statement": true,
+      "statement_type": "html",
+      "sample_count": 3,
+      "secret_count": 0,
+      "workspace_dir": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace",
+      "files": {
+        "cpp": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace\\solution.cpp",
+        "python": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace\\solution.py",
+        "java": "E:\\Personal projects\\DSA Visualizer\\local-cp-judge\\workspaces\\10sep-contest\\D-vacation\\workspace\\Main.java"
+      },
+      "reference_submissions": {
+        "accepted": [
+          "solution.py"
+        ]
+      }
+    }
+  ]
+}

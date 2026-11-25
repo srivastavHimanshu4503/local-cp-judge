@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>Problem C — Alphacode</title>
+  
+<style>
+  /* obsidian-statement-theme */
+  :root {
+    --bg-app: #09090B;
+    --bg-panel: #111115;
+    --bg-surface-subtle: #18181B;
+    --bg-surface-hover: #1F1F24;
+    --border-subtle: #27272A;
+    --border-strong: #3F3F46;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --accent-ac: #10B981;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #27272A transparent;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-secondary);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 24px 28px 36px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .statement-container {
+    max-width: 72ch;
+  }
+  a { color: var(--text-muted); text-decoration: none; }
+  a:hover { color: var(--text-primary); }
+
+  /* Metadata Strip: Uniform Muted Monochrome Chips */
+  .meta-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  /* Title Row */
+  .title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+  .source-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+    white-space: nowrap;
+  }
+  .source-link:hover {
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .section-block {
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #E4E4E7;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+  p { margin-bottom: 10px; max-width: 68ch; }
+  ul, ol { margin-left: 18px; margin-bottom: 12px; max-width: 68ch; }
+  li { margin-bottom: 4px; }
+  strong { color: #E4E4E7; font-weight: 600; }
+
+  code {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #E4E4E7;
+  }
+  pre {
+    font-family: "JetBrains Mono", Consolas, Menlo, monospace;
+    font-size: 13px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    color: var(--text-primary);
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+
+  /* Side-by-Side Example Cards */
+  .example-wrapper {
+    margin-bottom: 16px;
+  }
+  .example-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 600px) {
+    .example-grid { grid-template-columns: 1fr; }
+  }
+  .io-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .io-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(39, 39, 42, 0.6);
+  }
+  .io-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E4E4E7;
+  }
+  .btn-copy-sample {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: "Inter", sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .btn-copy-sample:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+  }
+  .btn-copy-sample.copied {
+    color: var(--accent-ac);
+  }
+  .io-card pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+  .example-explanation {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .dp-analysis-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 24px;
+  }
+  .dp-analysis-card pre {
+    background: var(--bg-app);
+  }
+</style>
+
+</head>
+<body>
+  <div class="statement-container">
+    <div class="meta-chips">
+      <span class="meta-chip">SPOJ</span>
+      <span class="meta-chip">DP (Counting / Decodings)</span>
+      <span class="meta-chip">2.0s</span>
+      <span class="meta-chip">1024MB</span>
+    </div>
+
+    <div class="title-row">
+      <h1>Problem C — Alphacode</h1>
+      <a class="source-link" href="https://www.spoj.com/problems/ACODE/" target="_blank" rel="noopener noreferrer">
+        <span>View on SPOJ</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </a>
+    </div>
+
+    <div class="section-block">
+      <h2>Problem Statement</h2>
+      
+<p>Alice and Bob communicate using a numerical cipher where the letters of the English alphabet 'A' through 'Z' are encoded as numbers 1 through 26:</p>
+<p>'A' &rarr; 1, 'B' &rarr; 2, ..., 'I' &rarr; 9, 'J' &rarr; 10, ..., 'Z' &rarr; 26.</p>
+<p>Given an encoded string of digits, calculate the total number of possible original messages that could have produced this encoding.</p>
+<p>The input consists of multiple test cases. The input is terminated by a single line containing <code>0</code>.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Input Format</h2>
+      
+<p>Each test case is given on a separate line containing a non-empty string of digits of length up to 5000. The last line of the input contains <code>0</code>, which should not be processed.</p>
+<pre>25114
+1111111111
+3333333333
+0</pre>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Output Format</h2>
+      
+<p>For each test case, output the number of possible decodings on a new line.</p>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Constraints</h2>
+      
+<ul>
+  <li>String length up to 5000 digits.</li>
+  <li>Answer fits within a 64-bit integer.</li>
+  <li>Input is terminated by <code>0</code>.</li>
+</ul>
+
+    </div>
+
+    <div class="section-block">
+      <h2>Examples</h2>
+      
+<div class="example-wrapper">
+  <div class="example-grid">
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Input</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>25114
+1111111111
+3333333333
+0</pre>
+    </div>
+    <div class="io-card">
+      <div class="io-card-header">
+        <span class="io-card-title">Example 1 Output</span>
+        <button type="button" class="btn-copy-sample" onclick="copyPre(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+      </div>
+      <pre>6
+89
+1</pre>
+    </div>
+  </div>
+  <div class="example-explanation">
+    <strong>Explanation:</strong> • For <code>25114</code>, the 6 valid decodings are:<br>&nbsp;&nbsp;1. <strong>2 5 1 1 4</strong> &rarr; BEAAD<br>&nbsp;&nbsp;2. <strong>2 5 1 14</strong> &rarr; BEAN<br>&nbsp;&nbsp;3. <strong>2 5 11 4</strong> &rarr; BEKD<br>&nbsp;&nbsp;4. <strong>25 1 1 4</strong> &rarr; YAAD<br>&nbsp;&nbsp;5. <strong>25 1 14</strong> &rarr; YAN<br>&nbsp;&nbsp;6. <strong>25 11 4</strong> &rarr; YKD<br>• For <code>1111111111</code> (ten 1's): Decodings correspond to Fibonacci F<sub>11</sub> = <strong>89</strong>.<br>• For <code>3333333333</code>: No double-digit '33' is &le; 26, so only 1 decoding (CCCCCCCCCC) is possible = <strong>1</strong>.
+  </div>
+</div>
+
+    </div>
+
+    <div class="dp-analysis-card">
+      
+<h3>Dynamic Programming Breakdown</h3>
+<p><strong>State Definition:</strong> Let <code>dp[i]</code> be the number of decodings for the prefix of length <code>i</code>.</p>
+<p><strong>Base Cases:</strong> <code>dp[0] = 1</code>, and <code>dp[1] = 1</code> (assuming <code>s[0] &ne; '0'</code>).</p>
+<p><strong>Transitions:</strong> For each position <code>i &ge; 2</code>:</p>
+<ul>
+  <li><strong>Single digit:</strong> If <code>s[i - 1] &ne; '0'</code>, the digit forms a valid letter: <code>dp[i] += dp[i - 1]</code></li>
+  <li><strong>Two digits:</strong> If the two-digit number <code>val = int(s[i-2:i])</code> satisfies <code>10 &le; val &le; 26</code>: <code>dp[i] += dp[i - 2]</code></li>
+</ul>
+<p><strong>Zero Handling:</strong> Note that '10' and '20' are valid double digits, but a standalone '0' cannot be parsed. If both single and double digit transitions are invalid, <code>dp[i]</code> remains 0.</p>
+<p><strong>Complexity:</strong> Time: O(|S|) &bull; Space: O(1) keeping only the last two DP states.</p>
+
+    </div>
+  </div>
+  <script>
+    function copyPre(btn) {
+      var card = btn.closest('.io-card');
+      var pre = card ? card.querySelector('pre') : null;
+      if (!pre || !navigator.clipboard) return;
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        var label = btn.querySelector('span');
+        if (label) label.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          if (label) label.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    }
+  </script>
+</body>
+</html>
