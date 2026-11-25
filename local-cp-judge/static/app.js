@@ -7,14 +7,32 @@
 
 function getOrCreateSessionId() {
   const KEY = "localcp_session_id";
-  let sid = localStorage.getItem(KEY);
+  let sid = null;
+  try {
+    sid = localStorage.getItem(KEY);
+  } catch (e) {}
+
   if (!sid || !/^[a-zA-Z0-9_\-]{8,64}$/.test(sid)) {
-    const rand = (window.crypto && window.crypto.randomUUID)
-      ? window.crypto.randomUUID().replace(/-/g, "")
-      : (Math.random().toString(36).slice(2) + Date.now().toString(36));
-    sid = `u_${rand}`.slice(0, 32);
-    localStorage.setItem(KEY, sid);
+    // Try to get existing session from document.cookie as backup
+    const m = document.cookie && document.cookie.match(/(?:^|;\s*)cp_session_id=([a-zA-Z0-9_\-]{8,64})/);
+    if (m && m[1]) {
+      sid = m[1];
+    } else {
+      const rand = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID().replace(/-/g, "")
+        : (Math.random().toString(36).slice(2) + Date.now().toString(36));
+      sid = `u_${rand}`.slice(0, 32);
+    }
+    try {
+      localStorage.setItem(KEY, sid);
+    } catch (e) {}
   }
+
+  // Ensure cookie is always synchronized for persistence across reloads/resets
+  try {
+    document.cookie = `cp_session_id=${sid}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch (e) {}
+
   return sid;
 }
 
@@ -76,6 +94,10 @@ const state = {
   activeSubmissionEntry: null,
   lastJudgeSuite: null,
   lastCompileError: "",
+  checklist: {
+    contests: {},
+    updated_at: 0,
+  },
   timer: {
     mode: "practice", // "practice" or "contest"
     countdownTargetSec: 7200,
@@ -90,6 +112,9 @@ const state = {
 // =====================================================================
 const elements = {
   contestSelect: document.getElementById("contest-select"),
+  btnContestChecklist: document.getElementById("btn-contest-checklist"),
+  contestChecklistIcon: document.getElementById("contest-checklist-icon"),
+  contestChecklistBadge: document.getElementById("contest-checklist-badge"),
   btnMockQuiz: document.getElementById("btn-mock-quiz"),
   problemSelect: document.getElementById("problem-select"),
   activeProblemDot: document.getElementById("active-problem-dot"),
@@ -130,6 +155,15 @@ const elements = {
   modalSolvedProgress: document.getElementById("modal-solved-progress"),
   timerBreakdownList: document.getElementById("timer-breakdown-list"),
   btnResetContestTimer: document.getElementById("btn-reset-contest-timer"),
+
+  // Contest Completion Checklist Modal
+  contestChecklistModal: document.getElementById("contest-checklist-modal"),
+  btnCloseChecklistModal: document.getElementById("btn-close-checklist-modal"),
+  btnCloseChecklistDone: document.getElementById("btn-close-checklist-done"),
+  checklistContestsSummary: document.getElementById("checklist-contests-summary"),
+  checklistProblemsSummary: document.getElementById("checklist-problems-summary"),
+  checklistOverallFill: document.getElementById("checklist-overall-fill"),
+  contestChecklistGrid: document.getElementById("contest-checklist-grid"),
 
   // Left Column (Statement, Submissions & Official Solution)
   panePdf: document.getElementById("pane-pdf"),
@@ -279,6 +313,7 @@ const elements = {
   lcBannerIcon: document.getElementById("lc-banner-icon"),
   lcBannerTitle: document.getElementById("lc-banner-title"),
   lcBannerSubtitle: document.getElementById("lc-banner-subtitle"),
+  btnBannerChecklist: document.getElementById("btn-banner-checklist"),
   problemStatusPill: document.getElementById("problem-status-pill"),
   lcVerdictTitle: document.getElementById("lc-verdict-title"),
   lcPassedCounter: document.getElementById("lc-passed-counter"),
@@ -776,16 +811,387 @@ function updateProblemStatusPill() {
   }
   elements.problemStatusPill.style.display = "inline-flex";
   const stat = state.problemStatuses[state.activeProblemId];
-  if (stat && stat.verdict === "AC") {
+  const isChecked = isProblemCheckedInChecklist(state.activeContestId, state.activeProblemId);
+  if (stat && stat.verdict === "AC" && isChecked) {
     elements.problemStatusPill.className = "problem-status-pill status-solved";
     elements.problemStatusPill.textContent = "Solved (AC) ✓";
-  } else if (stat && stat.verdict) {
+  } else if (isChecked) {
+    elements.problemStatusPill.className = "problem-status-pill status-solved";
+    elements.problemStatusPill.textContent = "Completed ✓";
+  } else if (stat && stat.verdict && stat.verdict !== "AC") {
     elements.problemStatusPill.className = "problem-status-pill status-failed";
     elements.problemStatusPill.textContent = `Wrong Attempt (${stat.verdict}) ✕`;
   } else {
     elements.problemStatusPill.className = "problem-status-pill status-unsolved";
     elements.problemStatusPill.textContent = "Not Attempted";
   }
+}
+
+// =====================================================================
+// Persistent Contest & Problem Completion Checklist
+// =====================================================================
+
+function getChecklistStorageKey() {
+  return `localcp_checklist_${SESSION_ID}`;
+}
+
+function getStoredStatusesForContest(contestId) {
+  if (!contestId) return {};
+  if (contestId === state.activeContestId && state.problemStatuses) {
+    return state.problemStatuses;
+  }
+  try {
+    const raw = localStorage.getItem(`localcp_problem_statuses_${contestId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function loadChecklistLocal() {
+  try {
+    const raw = localStorage.getItem(getChecklistStorageKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        state.checklist = {
+          contests: parsed.contests && typeof parsed.contests === "object" ? parsed.contests : {},
+          updated_at: Number(parsed.updated_at || 0),
+        };
+        return;
+      }
+    }
+  } catch (e) {}
+  state.checklist = { contests: {}, updated_at: 0 };
+}
+
+let _checklistSaveTimer = null;
+let _checklistPendingSync = false;
+
+function saveChecklist({ syncServer = true, keepalive = false } = {}) {
+  if (!keepalive) {
+    state.checklist.updated_at = Date.now();
+  }
+  try {
+    localStorage.setItem(getChecklistStorageKey(), JSON.stringify(state.checklist));
+  } catch (e) {}
+
+  if (!syncServer) return;
+  _checklistPendingSync = true;
+  const doPut = () => {
+    _checklistPendingSync = false;
+    fetch("/api/checklist", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state.checklist),
+      keepalive,
+    }).catch(() => {});
+  };
+  if (keepalive) {
+    if (_checklistSaveTimer) clearTimeout(_checklistSaveTimer);
+    doPut();
+    return;
+  }
+  if (_checklistSaveTimer) clearTimeout(_checklistSaveTimer);
+  _checklistSaveTimer = setTimeout(doPut, 120);
+}
+
+async function syncChecklistWithServer() {
+  try {
+    const res = await fetch("/api/checklist");
+    if (!res.ok) return;
+    const remote = await res.json();
+    const remoteTs = Number((remote && remote.updated_at) || 0);
+    const localTs = Number(state.checklist.updated_at || 0);
+    const hasRemoteData = remote && remote.contests && typeof remote.contests === "object" && Object.keys(remote.contests).length > 0;
+    const hasLocalData = state.checklist.contests && typeof state.checklist.contests === "object" && Object.keys(state.checklist.contests).length > 0;
+
+    if (hasRemoteData && (remoteTs >= localTs || !hasLocalData)) {
+      state.checklist = {
+        contests: remote.contests,
+        updated_at: remoteTs,
+      };
+      try {
+        localStorage.setItem(getChecklistStorageKey(), JSON.stringify(state.checklist));
+      } catch (e) {}
+    } else if (localTs > 0 && localTs > remoteTs) {
+      saveChecklist({ syncServer: true });
+    }
+  } catch (e) {}
+  hydrateChecklistFromExistingProgress();
+  updateContestChecklistUI();
+}
+
+function isProblemCheckedInChecklist(contestId, problemId) {
+  if (!contestId || !problemId) return false;
+  const cEntry = state.checklist.contests && state.checklist.contests[contestId];
+  const pEntry = cEntry && cEntry.problems && cEntry.problems[problemId];
+  if (pEntry && typeof pEntry.checked === "boolean") {
+    return pEntry.checked;
+  }
+  const statuses = getStoredStatusesForContest(contestId);
+  if (statuses[problemId] && statuses[problemId].verdict === "AC") {
+    return true;
+  }
+  const histKey = `${contestId}/${problemId}`;
+  const hist = state.submissionHistoryMap && state.submissionHistoryMap[histKey];
+  if (Array.isArray(hist) && hist.some((item) => item && item.suite === "all" && item.verdict === "AC")) {
+    return true;
+  }
+  return false;
+}
+
+function getContestChecklistStats(contestMeta) {
+  if (!contestMeta || !Array.isArray(contestMeta.problems)) {
+    return { total: 0, checked: 0, isCompleted: false };
+  }
+  const total = contestMeta.problems.length;
+  let checked = 0;
+  contestMeta.problems.forEach((p) => {
+    if (isProblemCheckedInChecklist(contestMeta.contest_id, p.problem_id)) {
+      checked++;
+    }
+  });
+  return {
+    total,
+    checked,
+    isCompleted: total > 0 && checked >= total,
+  };
+}
+
+function hydrateChecklistFromExistingProgress() {
+  if (!Array.isArray(state.contests) || state.contests.length === 0) return;
+  let changed = false;
+  state.contests.forEach((c) => {
+    const statuses = getStoredStatusesForContest(c.contest_id);
+    if (!state.checklist.contests[c.contest_id]) {
+      state.checklist.contests[c.contest_id] = { problems: {}, completedAt: null };
+    }
+    const cEntry = state.checklist.contests[c.contest_id];
+    if (!cEntry.problems || typeof cEntry.problems !== "object") cEntry.problems = {};
+
+    (c.problems || []).forEach((p) => {
+      const existing = cEntry.problems[p.problem_id];
+      if (existing && typeof existing.checked === "boolean") return;
+      const histKey = `${c.contest_id}/${p.problem_id}`;
+      const hist = state.submissionHistoryMap && state.submissionHistoryMap[histKey];
+      const hasAc =
+        (statuses[p.problem_id] && statuses[p.problem_id].verdict === "AC") ||
+        (Array.isArray(hist) && hist.some((it) => it && it.suite === "all" && it.verdict === "AC"));
+      if (hasAc) {
+        cEntry.problems[p.problem_id] = { checked: true, source: "ac", updatedAt: Date.now() };
+        changed = true;
+      }
+    });
+
+    const stats = getContestChecklistStats(c);
+    if (stats.isCompleted && !cEntry.completedAt) {
+      cEntry.completedAt = Date.now();
+      changed = true;
+    } else if (!stats.isCompleted && cEntry.completedAt) {
+      cEntry.completedAt = null;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveChecklist({ syncServer: true });
+  }
+}
+
+function setProblemChecklistState(contestId, problemId, checked, source = "manual") {
+  if (!contestId || !problemId) return { justCompletedContest: false, stats: { total: 0, checked: 0, isCompleted: false } };
+  const contestMeta = (state.contests || []).find((c) => c.contest_id === contestId)
+    || (state.contestMeta && state.contestMeta.contest_id === contestId ? state.contestMeta : null);
+  const prevStats = contestMeta ? getContestChecklistStats(contestMeta) : { isCompleted: false };
+
+  if (!state.checklist.contests[contestId] || typeof state.checklist.contests[contestId] !== "object") {
+    state.checklist.contests[contestId] = { problems: {}, completedAt: null };
+  }
+  const cEntry = state.checklist.contests[contestId];
+  if (!cEntry.problems || typeof cEntry.problems !== "object") cEntry.problems = {};
+
+  cEntry.problems[problemId] = {
+    checked: Boolean(checked),
+    source,
+    updatedAt: Date.now(),
+  };
+
+  const nextStats = contestMeta ? getContestChecklistStats(contestMeta) : { total: 0, checked: 0, isCompleted: false };
+  if (nextStats.isCompleted) {
+    if (!cEntry.completedAt) cEntry.completedAt = Date.now();
+  } else {
+    cEntry.completedAt = null;
+  }
+
+  saveChecklist({ syncServer: true });
+  updateContestChecklistUI();
+  if (contestId === state.activeContestId) {
+    if (state.contestMeta && state.contestMeta.problems) {
+      renderProblemTabs(state.contestMeta.problems);
+    }
+    updateProblemStatusPill();
+  }
+
+  return {
+    justCompletedContest: Boolean(!prevStats.isCompleted && nextStats.isCompleted),
+    stats: nextStats,
+  };
+}
+
+function refreshContestSelectorLabels() {
+  if (!elements.contestSelect || !Array.isArray(state.contests)) return;
+  const byId = new Map(state.contests.map((c) => [c.contest_id, c]));
+  Array.from(elements.contestSelect.options).forEach((opt) => {
+    const c = byId.get(opt.value);
+    if (!c) return;
+    const stats = getContestChecklistStats(c);
+    if (stats.isCompleted) {
+      opt.textContent = `✓ ${c.title} (${stats.checked}/${stats.total})`;
+    } else if (stats.checked > 0) {
+      opt.textContent = `${c.title} (${stats.checked}/${stats.total})`;
+    } else {
+      opt.textContent = c.title;
+    }
+  });
+}
+
+function updateContestChecklistUI() {
+  const activeContest = state.contestMeta || (state.contests || []).find((c) => c.contest_id === state.activeContestId);
+  const stats = getContestChecklistStats(activeContest);
+
+  if (elements.btnContestChecklist && elements.contestChecklistBadge) {
+    elements.btnContestChecklist.classList.toggle("completed", stats.isCompleted);
+    elements.btnContestChecklist.classList.toggle("partial", !stats.isCompleted && stats.checked > 0);
+    elements.contestChecklistBadge.textContent = stats.total > 0 ? `${stats.checked}/${stats.total}` : "0/0";
+    if (elements.contestChecklistIcon) {
+      elements.contestChecklistIcon.setAttribute("data-lucide", stats.isCompleted ? "check-circle-2" : "list-checks");
+    }
+    const cTitle = activeContest ? activeContest.title : "Contest";
+    elements.btnContestChecklist.title = stats.isCompleted
+      ? `${cTitle}: All ${stats.total}/${stats.total} completed ✓ (Click to open Checklist)`
+      : `${cTitle}: ${stats.checked}/${stats.total} questions checked (Click to open Checklist)`;
+  }
+
+  refreshContestSelectorLabels();
+  if (elements.contestChecklistModal && elements.contestChecklistModal.style.display === "flex") {
+    renderContestChecklistModal();
+  }
+  refreshIcons();
+}
+
+function openContestChecklistModal() {
+  if (!elements.contestChecklistModal) return;
+  hydrateChecklistFromExistingProgress();
+  renderContestChecklistModal();
+  elements.contestChecklistModal.style.display = "flex";
+  refreshIcons();
+}
+
+function renderContestChecklistModal() {
+  if (!elements.contestChecklistGrid) return;
+  const contests = Array.isArray(state.contests) ? state.contests : [];
+  const mainContests = contests.filter((c) => c.contest_id !== "mock-quiz");
+
+  let completedContests = 0;
+  let totalMainProblems = 0;
+  let checkedMainProblems = 0;
+
+  mainContests.forEach((c) => {
+    const st = getContestChecklistStats(c);
+    totalMainProblems += st.total;
+    checkedMainProblems += st.checked;
+    if (st.isCompleted) completedContests++;
+  });
+
+  if (elements.checklistContestsSummary) {
+    elements.checklistContestsSummary.textContent = `${completedContests} / ${mainContests.length} Contests Completed`;
+  }
+  if (elements.checklistProblemsSummary) {
+    elements.checklistProblemsSummary.textContent = `${checkedMainProblems} / ${totalMainProblems} Contest Questions Checked`;
+  }
+  if (elements.checklistOverallFill) {
+    const pct = totalMainProblems > 0 ? Math.round((checkedMainProblems / totalMainProblems) * 100) : 0;
+    elements.checklistOverallFill.style.width = `${pct}%`;
+  }
+
+  elements.contestChecklistGrid.innerHTML = "";
+  contests.forEach((contest) => {
+    const stats = getContestChecklistStats(contest);
+    const statuses = getStoredStatusesForContest(contest.contest_id);
+    const isActiveContest = contest.contest_id === state.activeContestId;
+
+    const card = document.createElement("div");
+    card.className = `checklist-contest-card${stats.isCompleted ? " is-completed" : ""}${isActiveContest ? " is-active-contest" : ""}`;
+    const pct = stats.total > 0 ? Math.round((stats.checked / stats.total) * 100) : 0;
+    const pillLabel = stats.isCompleted ? `Completed ${stats.checked}/${stats.total}` : `${stats.checked}/${stats.total}`;
+
+    card.innerHTML = `
+      <div class="checklist-card-header">
+        <div class="checklist-card-title-wrap">
+          <i data-lucide="${stats.isCompleted ? "check-circle-2" : "circle"}" class="checklist-card-check-icon"></i>
+          <button type="button" class="checklist-card-title" title="Open ${escapeHtml(contest.title)}">${escapeHtml(contest.title)}</button>
+        </div>
+        <span class="checklist-card-pill">${escapeHtml(pillLabel)}</span>
+      </div>
+      <div class="checklist-card-bar">
+        <div class="checklist-card-bar-fill" style="width: ${pct}%;"></div>
+      </div>
+      <div class="checklist-q-list"></div>
+    `;
+
+    card.querySelector(".checklist-card-title").addEventListener("click", async () => {
+      elements.contestChecklistModal.style.display = "none";
+      if (contest.contest_id !== state.activeContestId) {
+        await selectContest(contest.contest_id);
+      }
+    });
+
+    const qListEl = card.querySelector(".checklist-q-list");
+    (contest.problems || []).forEach((prob) => {
+      const checked = isProblemCheckedInChecklist(contest.contest_id, prob.problem_id);
+      const stat = statuses[prob.problem_id];
+      let statusChip = `<span class="checklist-q-status status-todo">Todo</span>`;
+      if (checked && stat && stat.verdict === "AC") {
+        statusChip = `<span class="checklist-q-status status-ac">AC</span>`;
+      } else if (checked) {
+        statusChip = `<span class="checklist-q-status status-done">Checked</span>`;
+      } else if (stat && stat.verdict) {
+        statusChip = `<span class="checklist-q-status status-fail">${escapeHtml(stat.verdict)}</span>`;
+      }
+
+      const row = document.createElement("div");
+      row.className = `checklist-q-row${checked ? " is-checked" : ""}`;
+      row.innerHTML = `
+        <div class="checklist-q-left">
+          <button type="button" class="checklist-box-btn" aria-pressed="${checked ? "true" : "false"}" title="${checked ? "Uncheck problem" : "Mark problem completed"}">
+            <i data-lucide="check"></i>
+          </button>
+          <button type="button" class="checklist-q-link" title="Open ${escapeHtml(prob.short_name)} · ${escapeHtml(prob.name)}">
+            <span class="checklist-q-slot">${escapeHtml(prob.short_name)}</span>
+            <span class="checklist-q-title">${escapeHtml(prob.name)}</span>
+          </button>
+        </div>
+        ${statusChip}
+      `;
+
+      row.querySelector(".checklist-box-btn").addEventListener("click", () => {
+        setProblemChecklistState(contest.contest_id, prob.problem_id, !checked, "manual");
+        renderContestChecklistModal();
+      });
+
+      row.querySelector(".checklist-q-link").addEventListener("click", async () => {
+        elements.contestChecklistModal.style.display = "none";
+        await selectContest(contest.contest_id, prob.problem_id);
+      });
+
+      qListEl.appendChild(row);
+    });
+
+    elements.contestChecklistGrid.appendChild(card);
+  });
+
+  refreshIcons();
 }
 
 // =====================================================================
@@ -1639,7 +2045,12 @@ function initTimer() {
     elements.btnResetContestTimer.addEventListener("click", () => resetContestTimer());
   }
 
-  window.addEventListener("beforeunload", saveTimersMap);
+  window.addEventListener("beforeunload", () => {
+    saveTimersMap();
+    if (_checklistPendingSync) {
+      saveChecklist({ syncServer: true, keepalive: true });
+    }
+  });
 }
 
 function toggleTimer() {
@@ -1996,7 +2407,9 @@ async function loadContestsList() {
     });
 
     const targetContestId = state.activeContestId || contests[0].contest_id;
+    hydrateChecklistFromExistingProgress();
     await selectContest(targetContestId);
+    updateContestChecklistUI();
   } catch (err) {
     elements.contestSelect.innerHTML = "<option value=''>Error loading contests</option>";
   }
@@ -2019,6 +2432,7 @@ async function selectContest(contestId, initialProblemId = null) {
     loadProblemStatuses();
     syncContestSolvedFromStatuses();
     renderProblemTabs(contestMeta.problems);
+    updateContestChecklistUI();
 
     if (contestMeta.problems.length > 0) {
       const match = initialProblemId && contestMeta.problems.find((p) => p.problem_id === initialProblemId);
@@ -2037,10 +2451,12 @@ function renderProblemTabs(problems) {
 
   problems.forEach((prob) => {
     const statusData = state.problemStatuses[prob.problem_id];
+    const isChecked = isProblemCheckedInChecklist(state.activeContestId, prob.problem_id);
     const opt = document.createElement("option");
     opt.value = prob.problem_id;
+    const prefix = isChecked ? "✓ " : "";
     const suffix = statusData && statusData.verdict ? ` [${statusData.verdict}]` : "";
-    opt.textContent = `${prob.short_name} · ${prob.name}${suffix}`;
+    opt.textContent = `${prefix}${prob.short_name} · ${prob.name}${suffix}`;
     elements.problemSelect.appendChild(opt);
   });
 
@@ -2051,7 +2467,8 @@ function renderProblemTabs(problems) {
   // Update active problem status dot
   if (elements.activeProblemDot) {
     const stat = state.activeProblemId ? state.problemStatuses[state.activeProblemId] : null;
-    if (stat && stat.verdict === "AC") {
+    const isChecked = isProblemCheckedInChecklist(state.activeContestId, state.activeProblemId);
+    if (isChecked || (stat && stat.verdict === "AC")) {
       elements.activeProblemDot.className = "problem-status-dot active-dot dot-solved";
     } else if (stat && stat.verdict) {
       elements.activeProblemDot.className = "problem-status-dot active-dot dot-attempted";
@@ -2559,10 +2976,12 @@ function renderLeetCodeResult(summary) {
   }
 
   // Update problem solved / wrong attempt status (only Submit / suite='all' marks AC)
+  let contestCompletionInfo = null;
   if (state.activeProblemId) {
     const isSubmissionRun = (summary.suite || state.lastJudgeSuite) === "all";
     if (summary.overall_verdict === "AC" && isSubmissionRun) {
       state.problemStatuses[state.activeProblemId] = { verdict: "AC", timestamp: Date.now() };
+      contestCompletionInfo = setProblemChecklistState(state.activeContestId, state.activeProblemId, true, "ac");
     } else if (summary.overall_verdict !== "AC") {
       const existing = state.problemStatuses[state.activeProblemId];
       if (!existing || existing.verdict !== "AC") {
@@ -2580,11 +2999,34 @@ function renderLeetCodeResult(summary) {
   if (elements.lcVerdictBannerCard) {
     elements.lcVerdictBannerCard.style.display = "flex";
     if (summary.overall_verdict === "AC") {
+      const isContestComplete = Boolean(
+        (summary.suite || state.lastJudgeSuite) === "all" &&
+        contestCompletionInfo &&
+        contestCompletionInfo.stats &&
+        contestCompletionInfo.stats.isCompleted
+      );
       elements.lcVerdictBannerCard.className = "lc-verdict-banner-card banner-solved";
       if (elements.lcBannerIcon) elements.lcBannerIcon.setAttribute("data-lucide", "check-circle-2");
-      if (elements.lcBannerTitle) elements.lcBannerTitle.textContent = "Problem Solved! (Accepted)";
+      if (elements.lcBannerTitle) {
+        elements.lcBannerTitle.textContent = isContestComplete
+          ? `Contest Complete! (${contestCompletionInfo.stats.checked}/${contestCompletionInfo.stats.total} Solved)`
+          : "Problem Solved! (Accepted)";
+      }
       if (elements.lcBannerSubtitle) {
-        elements.lcBannerSubtitle.textContent = `All ${summary.total} testcase(s) passed successfully in ${Number(summary.max_time_ms || 0).toFixed(1)} ms.`;
+        const cTitle = state.contestMeta ? state.contestMeta.title : "this contest";
+        elements.lcBannerSubtitle.textContent = isContestComplete
+          ? `All ${contestCompletionInfo.stats.total} questions in ${cTitle} completed and checked off!`
+          : `All ${summary.total} testcase(s) passed successfully in ${Number(summary.max_time_ms || 0).toFixed(1)} ms.`;
+      }
+      if (elements.btnBannerChecklist) {
+        const showBtn = (summary.suite || state.lastJudgeSuite) === "all";
+        elements.btnBannerChecklist.style.display = showBtn ? "inline-flex" : "none";
+        const spanEl = elements.btnBannerChecklist.querySelector("span");
+        if (spanEl && contestCompletionInfo && contestCompletionInfo.stats) {
+          spanEl.textContent = isContestComplete
+            ? `Checklist (${contestCompletionInfo.stats.checked}/${contestCompletionInfo.stats.total} ✓)`
+            : `Checklist (${contestCompletionInfo.stats.checked}/${contestCompletionInfo.stats.total})`;
+        }
       }
     } else {
       elements.lcVerdictBannerCard.className = "lc-verdict-banner-card banner-failed";
@@ -2592,6 +3034,9 @@ function renderLeetCodeResult(summary) {
       if (elements.lcBannerTitle) elements.lcBannerTitle.textContent = `${verdictTitle} (Wrong Attempt)`;
       if (elements.lcBannerSubtitle) {
         elements.lcBannerSubtitle.textContent = `${failedCount} of ${summary.total} testcase(s) failed. Inspect the mismatched output below.`;
+      }
+      if (elements.btnBannerChecklist) {
+        elements.btnBannerChecklist.style.display = "none";
       }
     }
   }
@@ -3367,6 +3812,8 @@ async function generateNewMockQuiz() {
       }
     });
     saveSubmissionHistoryMap();
+    delete state.checklist.contests["mock-quiz"];
+    saveChecklist({ syncServer: true });
     Object.keys(state.solutionsCache).forEach((k) => {
       if (k.startsWith("mock-quiz/")) {
         delete state.solutionsCache[k];
@@ -3376,6 +3823,7 @@ async function generateNewMockQuiz() {
     state.activeContestId = contestMeta.contest_id;
     await loadContestsList();
     updateTimerDisplay();
+    updateContestChecklistUI();
   } catch (err) {
     alert(`Could not generate Mock Quiz: ${err.message}`);
   } finally {
@@ -3401,6 +3849,27 @@ function initEventListeners() {
 
   if (elements.btnMockQuiz) {
     elements.btnMockQuiz.addEventListener("click", generateNewMockQuiz);
+  }
+  if (elements.btnContestChecklist) {
+    elements.btnContestChecklist.addEventListener("click", openContestChecklistModal);
+  }
+  if (elements.btnBannerChecklist) {
+    elements.btnBannerChecklist.addEventListener("click", openContestChecklistModal);
+  }
+  if (elements.btnCloseChecklistModal && elements.contestChecklistModal) {
+    elements.btnCloseChecklistModal.addEventListener("click", () => {
+      elements.contestChecklistModal.style.display = "none";
+    });
+    elements.contestChecklistModal.addEventListener("click", (e) => {
+      if (e.target === elements.contestChecklistModal) {
+        elements.contestChecklistModal.style.display = "none";
+      }
+    });
+  }
+  if (elements.btnCloseChecklistDone && elements.contestChecklistModal) {
+    elements.btnCloseChecklistDone.addEventListener("click", () => {
+      elements.contestChecklistModal.style.display = "none";
+    });
   }
 
   // Archive Upload
@@ -4126,6 +4595,7 @@ function initMobileSwitcher() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   loadSubmissionHistoryMap();
+  loadChecklistLocal();
   initResizers();
   initTimer();
   initMobileSwitcher();
@@ -4133,5 +4603,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   initMonacoEditor();
   await fetchToolchainStatus();
   await loadContestsList();
+  await syncChecklistWithServer();
   refreshIcons();
 });

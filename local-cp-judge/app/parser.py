@@ -295,15 +295,27 @@ def scaffold_problem_workspace(
     py_src = resolve_problem_template(problem_dir, "python")
     java_src = resolve_problem_template(problem_dir, "java")
 
-    if not py_target.exists():
+    # Treat 0-byte files as un-initialized so the global template is applied.
+    py_uninitialized = py_target.exists() and py_target.stat().st_size == 0
+    java_uninitialized = java_target.exists() and java_target.stat().st_size == 0
+
+    # Global fallback templates (python_template.py / java_template.java)
+    global_py_tpl = templates_dir / "python_template.py"
+    global_java_tpl = templates_dir / "java_template.java"
+
+    if not py_target.exists() or py_uninitialized:
         if py_src and py_src.exists():
             shutil.copy2(py_src, py_target)
+        elif global_py_tpl.exists():
+            shutil.copy2(global_py_tpl, py_target)
         else:
             py_target.write_text("", encoding="utf-8")
 
-    if not java_target.exists():
+    if not java_target.exists() or java_uninitialized:
         if java_src and java_src.exists():
             shutil.copy2(java_src, java_target)
+        elif global_java_tpl.exists():
+            shutil.copy2(global_java_tpl, java_target)
         else:
             java_target.write_text("", encoding="utf-8")
 

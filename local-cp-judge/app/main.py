@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.models import (
     AppConfig,
+    ChecklistPayload,
     CodeResponse,
     CodeUpdateRequest,
     CompileResult,
@@ -245,6 +246,41 @@ def get_or_create_session(response: Response, session_id: Optional[str] = Depend
     sid = _sanitize_session_id(session_id) or f"u_{secrets.token_hex(12)}"
     response.set_cookie(key=SESSION_COOKIE_NAME, value=sid, samesite="lax", httponly=False)
     return {"session_id": sid}
+
+
+def _get_checklist_file(session_id: Optional[str]) -> Path:
+    sid = _sanitize_session_id(session_id)
+    if sid:
+        base = USER_WORKSPACES_ROOT / sid
+        base.mkdir(parents=True, exist_ok=True)
+        return base / "checklist.json"
+    return WORKSPACES_ROOT / ".checklist.json"
+
+
+@app.get("/api/checklist", response_model=ChecklistPayload)
+def get_contest_checklist(session_id: Optional[str] = Depends(get_session_id)) -> ChecklistPayload:
+    """Loads persisted contest completion checklist for the active session."""
+    path = _get_checklist_file(session_id)
+    if not path.exists() or not path.is_file():
+        return ChecklistPayload(contests={}, updated_at=None)
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        if isinstance(raw, dict):
+            return ChecklistPayload.model_validate(raw)
+    except Exception:
+        pass
+    return ChecklistPayload(contests={}, updated_at=None)
+
+
+@app.put("/api/checklist", response_model=ChecklistPayload)
+def save_contest_checklist(
+    payload: ChecklistPayload,
+    session_id: Optional[str] = Depends(get_session_id),
+) -> ChecklistPayload:
+    """Persists contest completion checklist state to disk for the active session."""
+    path = _get_checklist_file(session_id)
+    path.write_text(payload.model_dump_json(indent=2), encoding="utf-8")
+    return payload
 
 
 @app.get("/api/system/status", response_model=SystemStatus)
@@ -911,10 +947,16 @@ def get_problem_code(
         filename = LANG_FILENAMES[lang_key]
         target_file = workspace_dir / filename
 
-        if not target_file.exists():
+        # Treat 0-byte files as un-initialized so the global template is applied.
+        file_uninitialized = target_file.exists() and target_file.stat().st_size == 0
+        if not target_file.exists() or file_uninitialized:
             prob_tpl = resolve_problem_template(problem_dir, lang_key)
+            global_tpl_name = "python_template.py" if lang_key == "python" else "java_template.java"
+            global_tpl = TEMPLATES_DIR / global_tpl_name
             if prob_tpl and prob_tpl.exists():
                 shutil.copy2(prob_tpl, target_file)
+            elif global_tpl.exists():
+                shutil.copy2(global_tpl, target_file)
             else:
                 target_file.write_text("", encoding="utf-8")
 

@@ -37,6 +37,11 @@
           <option value="">Loading contests...</option>
         </select>
 
+        <button type="button" id="btn-contest-checklist" class="btn-header-nav btn-contest-checklist" title="Contest Completion Checklist (Persistent across sessions)">
+          <i data-lucide="list-checks" id="contest-checklist-icon"></i>
+          <span id="contest-checklist-badge" class="tabular-nums">0/4</span>
+        </button>
+
         <button type="button" id="btn-mock-quiz" class="btn-header-nav btn-mock-quiz" title="Generate a fresh 4-question Mockup Quiz from all available contests">
           <i data-lucide="shuffle"></i>
           <span>Mock</span>
@@ -509,6 +514,10 @@
                   <div id="lc-banner-title" class="verdict-banner-title">Problem Solved!</div>
                   <div id="lc-banner-subtitle" class="verdict-banner-subtitle">All testcases passed without discrepancies.</div>
                 </div>
+                <button type="button" id="btn-banner-checklist" class="btn btn-xs btn-banner-checklist" style="display: none;" title="Open Persistent Contest Checklist">
+                  <i data-lucide="check-square"></i>
+                  <span>Checklist</span>
+                </button>
               </div>
 
               <!-- Verdict Header: Status + Metrics -->
@@ -941,6 +950,42 @@
           <i data-lucide="rotate-ccw"></i>
           <span>Reset Entire Contest</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Persistent Contest & Question Completion Checklist Modal -->
+  <div id="contest-checklist-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card modal-card-wide modal-card-checklist">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="check-square"></i>
+          <span>Contest Completion Checklist</span>
+        </div>
+        <button id="btn-close-checklist-modal" class="btn-icon" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body modal-body-tall">
+        <div class="checklist-hero-bar">
+          <div class="checklist-hero-stats">
+            <div class="checklist-hero-main">
+              <strong id="checklist-contests-summary" class="checklist-contests-summary">0 / 0 Contests Completed</strong>
+              <span id="checklist-problems-summary" class="checklist-problems-summary">0 / 0 Questions Checked</span>
+            </div>
+            <div class="checklist-progress-track">
+              <div id="checklist-overall-fill" class="checklist-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+        <div id="contest-checklist-grid" class="contest-checklist-grid"></div>
+      </div>
+      <div class="modal-footer checklist-modal-footer">
+        <span class="checklist-persist-note">
+          <i data-lucide="hard-drive"></i>
+          <span>Auto-checked on Accepted (Submit) &bull; Persisted locally</span>
+        </span>
+        <button type="button" id="btn-close-checklist-done" class="btn btn-outline-subtle">Done</button>
       </div>
     </div>
   </div>

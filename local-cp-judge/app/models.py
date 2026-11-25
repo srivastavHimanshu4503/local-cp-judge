@@ -108,6 +108,17 @@ class CodeResponse(BaseModel):
     is_reference: bool = Field(default=False, description="True if this is a read-only reference submission")
 
 
+class ChecklistPayload(BaseModel):
+    """Persistent contest and problem completion checklist."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    contests: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Map of contest_id to problem completion states and completed_at timestamp"
+    )
+    updated_at: Optional[int] = Field(default=None, description="Last client update epoch ms")
+
+
 class OfficialSolutionItem(BaseModel):
     """Official accepted solution entry for Practice Mode Solutions tab."""
     model_config = ConfigDict(populate_by_name=True)

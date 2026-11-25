@@ -67,6 +67,34 @@ def main() -> int:
         assert 'id="btn-mode-practice"' in home_text
         assert 'id="btn-mode-contest"' in home_text
         assert 'id="description-origin-header"' in home_text
+        assert 'id="btn-contest-checklist"' in home_text
+        assert 'id="contest-checklist-modal"' in home_text
+
+        # Checklist GET/PUT persistence round-trip
+        cl_sc, _, cl_bytes = _get(base_url, "/api/checklist", headers=headers)
+        assert cl_sc == 200
+        sample_cl = {
+            "contests": {
+                "10sep-contest": {
+                    "problems": {
+                        "A-rabbit-frog-1": {"checked": True, "source": "manual", "updatedAt": 12345}
+                    },
+                    "completedAt": None,
+                }
+            },
+            "updated_at": 12345,
+        }
+        put_req = urllib.request.Request(
+            base_url + "/api/checklist",
+            data=json.dumps(sample_cl).encode("utf-8"),
+            headers={**headers, "Content-Type": "application/json"},
+            method="PUT",
+        )
+        with urllib.request.urlopen(put_req, timeout=10) as put_resp:
+            assert put_resp.status == 200
+        cl_sc2, _, cl_bytes2 = _get(base_url, "/api/checklist", headers=headers)
+        assert cl_sc2 == 200
+        assert json.loads(cl_bytes2.decode("utf-8"))["contests"]["10sep-contest"]["problems"]["A-rabbit-frog-1"]["checked"] is True
 
         sc, _, sys_bytes = _get(base_url, "/api/system/status")
         assert sc == 200
